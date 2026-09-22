@@ -69,6 +69,33 @@ export async function apiRequest<T>(
   return data;
 }
 
+export function mediaUrl(path: string | null | undefined) {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${API_URL}${path}`;
+}
+
+export async function uploadRequest<T>(path: string, form: FormData, accessToken: string | null) {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+    body: form,
+  });
+
+  const data = (await response.json().catch(() => ({}))) as T & ErrorBody;
+  if (!response.ok) {
+    throw new ApiError(
+      data.error?.message ?? 'Something went wrong. Try again.',
+      response.status,
+      data.error?.details ?? [],
+    );
+  }
+  return data;
+}
+
 export async function authorizedRequest<T>(
   path: string,
   options: { method?: string; body?: unknown },

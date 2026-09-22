@@ -6,7 +6,10 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { notFoundHandler } from './middleware/notFound.js';
 import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
+import { businessRouter } from './routes/businesses.js';
+import { categoryRouter } from './routes/categories.js';
 import { healthRouter } from './routes/health.js';
+import { uploadsDirectory, uploadsPublicPath } from './storage/files.js';
 
 export function createApp() {
   const app = express();
@@ -23,9 +26,12 @@ export function createApp() {
     }),
   );
   app.use(express.json());
+  app.use(uploadsPublicPath, express.static(uploadsDirectory));
 
   app.use('/api', healthRouter);
   app.use('/api/auth', authRouter);
+  app.use('/api/categories', categoryRouter);
+  app.use('/api/businesses', businessRouter);
   app.use('/api/admin', adminRouter);
   app.use(notFoundHandler);
   app.use(errorHandler);

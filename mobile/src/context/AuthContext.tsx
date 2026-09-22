@@ -1,5 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { apiRequest, authorizedRequest, type PublicUser, type Session } from '../services/api';
+import {
+  ApiError,
+  apiRequest,
+  authorizedRequest,
+  uploadRequest,
+  type PublicUser,
+  type Session,
+} from '../services/api';
 import { clearTokens, readTokens, saveTokens } from '../services/tokenStorage';
 
 type AuthStatus = 'loading' | 'signedOut' | 'signedIn';
@@ -18,6 +25,8 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
+  request: <T>(path: string, options?: { method?: string; body?: unknown }) => Promise<T>;
+  upload: <T>(path: string, form: FormData) => Promise<T>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -93,6 +102,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           body: input,
         });
         await applySession(session);
+      },
+      async request<T>(path: string, options: { method?: string; body?: unknown } = {}) {
+        return authorizedRequest<T>(path, options, { accessToken, refreshToken }, async (session) => {
+          await applySession(session);
+        });
+      },
+      async upload<T>(path: string, form: FormData) {
+        try {
+          return await uploadRequest<T>(path, form, accessToken);
+        } catch (error) {
+          if (!(error instanceof ApiError) || error.status !== 401 || !refreshToken) {
+            throw error;
+          }
+          const session = await apiRequest<Session>('/api/auth/refresh', {
+            method: 'POST',
+            body: { refreshToken },
+          });
+          await applySession(session);
+          return uploadRequest<T>(path, form, session.accessToken);
+        }
       },
       async logout() {
         if (refreshToken) {

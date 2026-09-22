@@ -143,6 +143,30 @@ GET  /api/admin/me
 
 Passwords must be 8 to 72 characters and include a letter and a number. The mobile app stores tokens in the device secure store. The admin app keeps them in `sessionStorage` for the browser tab.
 
+## Businesses
+
+Customers can search approved businesses by name or active service name, and filter by category, address text, minimum rating, maximum price, and a weekday the business is open. Choosing a bookable time is part of booking, not this search.
+
+Business owners create and edit their own listings, services, prices, durations, weekly hours, logo, and gallery. A new business stays pending. Editing an approved business does not send it back for review. Inactive services are hidden from customers.
+
+Administrators approve, reject (with a reason), or suspend a business from the admin site. Pending, rejected, and suspended businesses are not public. An owner can still open their own listing.
+
+Images are stored on the API machine under `server/uploads/`, which is not committed. The database stores the public path, such as `/uploads/logos/...`. JPEG, PNG, and WebP files up to 5 MB are accepted.
+
+```text
+GET  /api/categories
+GET  /api/businesses
+GET  /api/businesses/:id
+GET  /api/businesses/:id/services
+GET  /api/businesses/mine
+POST /api/businesses
+PUT  /api/businesses/:id/hours
+GET  /api/admin/businesses
+POST /api/admin/businesses/:id/approve
+POST /api/admin/businesses/:id/reject
+POST /api/admin/businesses/:id/suspend
+```
+
 ## Run
 
 Use three terminals:
@@ -155,7 +179,7 @@ npm run dev:mobile
 
 - API: http://localhost:4000/api/health returns `{ "status": "ok" }`
 - Admin: http://localhost:5173 shows that health status
-- Mobile: Expo prints a QR code and simulator shortcuts. The first screen is a welcome placeholder.
+- Mobile: Expo prints a QR code and simulator shortcuts. Customers browse approved businesses. Owners manage their own.
 
 ## Checks
 
@@ -172,6 +196,7 @@ Linting uses ESLint for the API and the Expo app, and Oxlint for the admin app (
 - Phase 1 — project setup: complete
 - Phase 2 — database: complete
 - Phase 3 — authentication: complete
-- Businesses, bookings, reviews, notifications, and the admin dashboard UI: not started
+- Phase 4 — business management: complete
+- Bookings, reviews, notifications, and the rest of the admin dashboard: not started
 
 `GET /api/health` does not query MySQL. Use `npm run db:check` to confirm the database connection.

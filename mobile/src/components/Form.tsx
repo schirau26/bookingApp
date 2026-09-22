@@ -1,5 +1,14 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInputProps,
+} from 'react-native';
 
 export function Field({
   label,
@@ -52,6 +61,58 @@ export function SecondaryButton({ label, onPress }: { label: string; onPress: ()
 
 export function Screen({ children }: { children: ReactNode }) {
   return <View style={styles.screen}>{children}</View>;
+}
+
+export function ScrollScreen({
+  children,
+  refreshing,
+  onRefresh,
+}: {
+  children: ReactNode;
+  refreshing?: boolean;
+  onRefresh?: () => void;
+}) {
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl onRefresh={onRefresh} refreshing={refreshing ?? false} />
+        ) : undefined
+      }
+      style={styles.scroll}
+    >
+      {children}
+    </ScrollView>
+  );
+}
+
+export function ListCard({
+  title,
+  lines,
+  onPress,
+}: {
+  title: string;
+  lines: string[];
+  onPress?: () => void;
+}) {
+  const content = (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{title}</Text>
+      {lines.map((line, index) => (
+        <Text key={`${index}-${line}`} style={styles.cardLine}>
+          {line}
+        </Text>
+      ))}
+    </View>
+  );
+  if (!onPress) return content;
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress}>
+      {content}
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -112,5 +173,32 @@ const styles = StyleSheet.create({
     color: '#1c1915',
     fontSize: 16,
     fontWeight: '600',
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: '#f6f4ef',
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderColor: '#e4ddd2',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 16,
+  },
+  cardTitle: {
+    color: '#1c1915',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  cardLine: {
+    color: '#3f3832',
+    fontSize: 15,
+    lineHeight: 22,
   },
 });

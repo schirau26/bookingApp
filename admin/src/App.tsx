@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import './App.css';
+import { BusinessesPanel } from './Businesses';
 import {
   ApiError,
   apiRequest,
@@ -185,12 +186,13 @@ export default function App() {
   }
 
   return (
-    <main className="shell">
+    <main className="shell wide">
       <p className="eyebrow">Booking platform</p>
       <h1>Admin</h1>
       <p className="intro">
-        Signed in as {user.fullName} ({user.email}). Management screens arrive in a later phase.
+        Signed in as {user.fullName} ({user.email}).
       </p>
+      <BusinessesPanel />
       <section className="card" aria-live="polite">
         <h2>API status</h2>
         {health.status === 'loading' ? <p>Checking the API…</p> : null}

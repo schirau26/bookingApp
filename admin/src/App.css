@@ -4,6 +4,10 @@
   padding: 64px 24px;
 }
 
+.shell.wide {
+  max-width: 1100px;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: #6b6256;
@@ -111,4 +115,91 @@ h1 {
   display: block;
   color: #7f1d1d;
   margin: 0;
+}
+
+.businesses {
+  margin-top: 24px;
+}
+
+.toolbar,
+.pager,
+.actions,
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar {
+  margin-bottom: 16px;
+}
+
+.toolbar input,
+.toolbar select,
+.confirm textarea {
+  border: 1px solid #e4ddd2;
+  border-radius: 12px;
+  font: inherit;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.confirm {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.confirm textarea {
+  min-height: 88px;
+  width: 100%;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e4ddd2;
+  padding: 12px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+td span {
+  display: block;
+  color: #6b6256;
+  font-size: 14px;
+}
+
+.actions button,
+.pager button,
+.toolbar button,
+.confirm button {
+  border: 0;
+  border-radius: 12px;
+  background: #1c1915;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+.actions button:nth-child(2),
+.confirm button[type='button'] {
+  background: #fff;
+  color: #1c1915;
+  border: 1px solid #e4ddd2;
+}
+
+.pager {
+  margin-top: 16px;
 }
