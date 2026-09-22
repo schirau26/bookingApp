@@ -42,6 +42,10 @@ export function ReviewFormScreen({ navigation, route }: Props) {
   }, [businessId, request, reviewId]);
 
   async function save() {
+    if (!body.trim()) {
+      setError('Validation failed');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {

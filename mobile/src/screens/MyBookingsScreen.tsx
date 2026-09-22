@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ListCard, ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
 import type { CustomerStackParamList } from '../navigation/types';
@@ -16,10 +16,12 @@ export function MyBookingsScreen({ navigation }: Props) {
   const { request } = useAuth();
   const [when, setWhen] = useState<'upcoming' | 'past'>('upcoming');
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     let cancelled = false;
+    setLoading(true);
     request<{ bookings: BookingRecord[] }>(`/api/bookings/mine?when=${when}`)
       .then((body) => {
         if (!cancelled) {
@@ -31,6 +33,9 @@ export function MyBookingsScreen({ navigation }: Props) {
         if (!cancelled) {
           setError(caught instanceof ApiError ? caught.message : 'Unable to load your bookings.');
         }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -75,8 +80,11 @@ export function MyBookingsScreen({ navigation }: Props) {
           );
         })}
       </View>
+      {loading ? <ActivityIndicator style={styles.spinner} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {bookings.length === 0 ? <Text style={styles.empty}>No {when} bookings.</Text> : null}
+      {!loading && !error && bookings.length === 0 ? (
+        <Text style={styles.empty}>No {when} bookings.</Text>
+      ) : null}
       {bookings.map((booking) => (
         <View key={booking.id}>
           <ListCard
@@ -141,6 +149,9 @@ const styles = StyleSheet.create({
   empty: {
     color: '#3f3832',
     fontSize: 16,
+  },
+  spinner: {
+    marginVertical: 24,
   },
   error: {
     color: '#7f1d1d',

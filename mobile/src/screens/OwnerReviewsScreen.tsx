@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ListCard, PrimaryButton, ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
 import type { OwnerStackParamList } from '../navigation/types';
@@ -16,10 +16,12 @@ export function OwnerReviewsScreen({ route }: Props) {
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [replies, setReplies] = useState<Record<string, string>>({});
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     let cancelled = false;
+    setLoading(true);
     request<{ reviews: PublicReview[] }>(`/api/businesses/${businessId}/reviews`)
       .then((body) => {
         if (cancelled) return;
@@ -31,6 +33,9 @@ export function OwnerReviewsScreen({ route }: Props) {
         if (!cancelled) {
           setError(caught instanceof ApiError ? caught.message : 'Unable to load reviews.');
         }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -67,8 +72,9 @@ export function OwnerReviewsScreen({ route }: Props) {
 
   return (
     <ScrollScreen>
+      {loading ? <ActivityIndicator style={styles.spinner} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {reviews.length === 0 ? <Text style={styles.empty}>No reviews yet.</Text> : null}
+      {!loading && !error && reviews.length === 0 ? <Text style={styles.empty}>No reviews yet.</Text> : null}
       {reviews.map((review) => (
         <View key={review.id} style={styles.block}>
           <ListCard lines={[formatStars(review.rating), review.body]} title={review.authorName} />
@@ -122,6 +128,9 @@ const styles = StyleSheet.create({
   empty: {
     color: '#3f3832',
     fontSize: 16,
+  },
+  spinner: {
+    marginVertical: 24,
   },
   error: {
     color: '#7f1d1d',

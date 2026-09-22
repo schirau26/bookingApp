@@ -2,7 +2,7 @@
 
 Customers discover businesses, reserve services, and leave reviews. Business owners manage their listing and bookings. Administrators use a separate web dashboard.
 
-Phase 1 sets up the three applications. Phase 2 adds the MySQL schema. Authentication and product features come in later phases.
+The API is the source of truth for authorization, availability, and review eligibility. Bookings use Africa/Windhoek. One customer reviews a business once. Notifications stay in the app.
 
 ## Applications
 
@@ -266,5 +266,6 @@ Linting uses ESLint for the API and the Expo app, and Oxlint for the admin app (
 - Phase 7 — notifications: complete
 - Phase 8 — admin dashboard: complete
 - Phase 9 — testing: complete
+- Phase 10 — polish: complete
 
 `GET /api/health` does not query MySQL. Use `npm run db:check` to confirm the database connection.

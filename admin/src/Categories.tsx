@@ -14,6 +14,7 @@ export function CategoriesPanel() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [editing, setEditing] = useState<Category | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Category | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
@@ -74,14 +75,16 @@ export function CategoriesPanel() {
     }
   }
 
-  async function remove(category: Category) {
+  async function remove() {
+    if (!pendingDelete) return;
     const session = readSession();
     setError(null);
     try {
-      await apiRequest(`/api/admin/categories/${category.id}`, {
+      await apiRequest(`/api/admin/categories/${pendingDelete.id}`, {
         method: 'DELETE',
         accessToken: session.accessToken,
       });
+      setPendingDelete(null);
       setLoading(true);
       setRevision((current) => current + 1);
     } catch (caught) {
@@ -139,7 +142,7 @@ export function CategoriesPanel() {
                   <button type="button" onClick={() => setEditing(category)}>
                     Rename
                   </button>
-                  <button type="button" onClick={() => void remove(category)}>
+                  <button type="button" onClick={() => setPendingDelete(category)}>
                     Delete
                   </button>
                 </td>
@@ -148,6 +151,23 @@ export function CategoriesPanel() {
           </tbody>
         </table>
       </div>
+      ) : null}
+      {pendingDelete ? (
+        <form
+          className="confirm"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void remove();
+          }}
+        >
+          <p>Delete {pendingDelete.name}?</p>
+          <div className="actions">
+            <button type="submit">Confirm</button>
+            <button type="button" onClick={() => setPendingDelete(null)}>
+              Cancel
+            </button>
+          </div>
+        </form>
       ) : null}
       {editing ? (
         <form

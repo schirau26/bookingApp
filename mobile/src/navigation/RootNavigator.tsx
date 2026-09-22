@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
@@ -35,15 +35,28 @@ const AdminStack = createNativeStackNavigator<AdminStackParamList>();
 
 const screenOptions = {
   headerShadowVisible: false,
-  headerRight: () => <LogoutButton />,
+  headerRight: () => <HeaderActions />,
 };
 
-function LogoutButton() {
-  const { logout } = useAuth();
+function HeaderActions() {
+  const { logout, user } = useAuth();
+  const navigation = useNavigation();
+  const showInbox = user?.role === 'CUSTOMER' || user?.role === 'BUSINESS_OWNER';
   return (
-    <Pressable accessibilityRole="button" onPress={() => void logout()}>
-      <Text style={styles.logout}>Log out</Text>
-    </Pressable>
+    <View style={styles.headerActions}>
+      {showInbox ? (
+        <Pressable
+          accessibilityLabel="Inbox"
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('Notifications' as never)}
+        >
+          <Text style={styles.logout}>Inbox</Text>
+        </Pressable>
+      ) : null}
+      <Pressable accessibilityRole="button" onPress={() => void logout()}>
+        <Text style={styles.logout}>Log out</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -116,6 +129,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#f6f4ef',
+  },
+  headerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 16,
   },
   logout: {
     color: '#1c1915',

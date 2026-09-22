@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ListCard, ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
 import type { CustomerStackParamList, OwnerStackParamList } from '../navigation/types';
@@ -23,10 +23,12 @@ export function NotificationsScreen({ navigation }: CustomerProps | OwnerProps) 
   const { request, user } = useAuth();
   const [notifications, setNotifications] = useState<InboxNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     let cancelled = false;
+    setLoading(true);
     request<{ notifications: InboxNotification[]; unreadCount: number }>('/api/notifications')
       .then((body) => {
         if (cancelled) return;
@@ -38,6 +40,9 @@ export function NotificationsScreen({ navigation }: CustomerProps | OwnerProps) 
         if (!cancelled) {
           setError(caught instanceof ApiError ? caught.message : 'Unable to load notifications.');
         }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -71,9 +76,14 @@ export function NotificationsScreen({ navigation }: CustomerProps | OwnerProps) 
 
   return (
     <ScrollScreen>
-      <Text style={styles.summary}>{unreadCount === 0 ? 'You are caught up.' : `${unreadCount} unread`}</Text>
+      {loading ? <ActivityIndicator style={styles.spinner} /> : null}
+      {!loading && !error ? (
+        <Text style={styles.summary}>{unreadCount === 0 ? 'You are caught up.' : `${unreadCount} unread`}</Text>
+      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {notifications.length === 0 ? <Text style={styles.empty}>No notifications yet.</Text> : null}
+      {!loading && !error && notifications.length === 0 ? (
+        <Text style={styles.empty}>No notifications yet.</Text>
+      ) : null}
       {notifications.map((item) => (
         <View key={item.id}>
           <ListCard lines={[item.message]} onPress={() => open(item)} title={item.title} unread={!item.isRead} />
@@ -91,6 +101,9 @@ const styles = StyleSheet.create({
     color: '#3f3832',
     fontSize: 16,
     marginBottom: 12,
+  },
+  spinner: {
+    marginVertical: 24,
   },
   empty: {
     color: '#3f3832',

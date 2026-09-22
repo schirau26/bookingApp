@@ -6,7 +6,7 @@ export function AdminHomeScreen() {
     <Screen>
       <Text style={styles.title}>Use the web dashboard</Text>
       <Text style={styles.body}>
-        Administrator approvals, rejections, and suspensions are handled in the admin website.
+        The full dashboard for users, businesses, bookings, reviews, and categories is on the admin website.
       </Text>
     </Screen>
   );
