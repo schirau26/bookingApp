@@ -3,12 +3,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { AdminHomeScreen } from '../screens/AdminHomeScreen';
+import { BookScreen } from '../screens/BookScreen';
 import { BusinessDetailScreen } from '../screens/BusinessDetailScreen';
 import { BusinessFormScreen } from '../screens/BusinessFormScreen';
 import { DiscoverScreen } from '../screens/DiscoverScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { ManageBusinessScreen } from '../screens/ManageBusinessScreen';
+import { MyBookingsScreen } from '../screens/MyBookingsScreen';
 import { MyBusinessesScreen } from '../screens/MyBusinessesScreen';
+import { OwnerBookingsScreen } from '../screens/OwnerBookingsScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { ServiceFormScreen } from '../screens/ServiceFormScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
@@ -78,6 +81,7 @@ export function RootNavigator() {
           <OwnerStack.Screen component={BusinessFormScreen} name="BusinessForm" options={{ title: 'Business' }} />
           <OwnerStack.Screen component={ManageBusinessScreen} name="ManageBusiness" options={{ title: 'Manage' }} />
           <OwnerStack.Screen component={ServiceFormScreen} name="ServiceForm" options={{ title: 'Service' }} />
+          <OwnerStack.Screen component={OwnerBookingsScreen} name="OwnerBookings" options={{ title: 'Bookings' }} />
         </OwnerStack.Navigator>
       ) : user.role === 'ADMIN' ? (
         <AdminStack.Navigator screenOptions={screenOptions}>
@@ -91,6 +95,8 @@ export function RootNavigator() {
             name="BusinessDetail"
             options={{ title: 'Business' }}
           />
+          <CustomerStack.Screen component={BookScreen} name="Book" options={{ title: 'Book' }} />
+          <CustomerStack.Screen component={MyBookingsScreen} name="MyBookings" options={{ title: 'My bookings' }} />
         </CustomerStack.Navigator>
       )}
     </NavigationContainer>

@@ -2,6 +2,7 @@ import { Router, type RequestHandler } from 'express';
 import { Role } from '../generated/prisma/client.js';
 import { requireAuth, requireRole } from '../middleware/requireAuth.js';
 import { imageUpload } from '../middleware/upload.js';
+import { listAvailability, listOwnerBookings } from '../services/bookingService.js';
 import {
   addPhoto,
   createBusiness,
@@ -19,6 +20,7 @@ import {
   updateBusiness,
   updateService,
 } from '../services/businessService.js';
+import { availabilityQuerySchema, ownerBookingsQuerySchema } from '../validators/booking.js';
 import {
   businessQuerySchema,
   createBusinessSchema,
@@ -66,6 +68,26 @@ businessRouter.post('/', ...owner, async (req, res, next) => {
     const body = createBusinessSchema.parse(req.body);
     const result = await createBusiness(req.authUser!.id, body);
     res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+businessRouter.get('/:id/services/:serviceId/availability', async (req, res, next) => {
+  try {
+    const query = availabilityQuerySchema.parse(req.query);
+    res.json(
+      await listAvailability(idParam(req.params.id), idParam(req.params.serviceId), query.date),
+    );
+  } catch (error) {
+    next(error);
+  }
+});
+
+businessRouter.get('/:id/bookings', ...owner, async (req, res, next) => {
+  try {
+    const query = ownerBookingsQuerySchema.parse(req.query);
+    res.json(await listOwnerBookings(req.authUser!.id, idParam(req.params.id), query));
   } catch (error) {
     next(error);
   }

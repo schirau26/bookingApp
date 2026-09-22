@@ -153,6 +153,23 @@ Administrators approve, reject (with a reason), or suspend a business from the a
 
 Images are stored on the API machine under `server/uploads/`, which is not committed. The database stores the public path, such as `/uploads/logos/...`. JPEG, PNG, and WebP files up to 5 MB are accepted.
 
+## Bookings
+
+All businesses use Africa/Windhoek time. Available times start at opening and step forward by the service duration. A slot must finish by closing time, and any booking that is not cancelled blocks overlapping times.
+
+Creating a booking locks the business row and checks the slot again, so two customers cannot reserve the same time. The booking stores the price and duration from that moment and starts as pending. The customer can cancel a pending or confirmed booking. The owner can confirm it, complete it, mark it as a no-show, or cancel it.
+
+```text
+GET  /api/businesses/:businessId/services/:serviceId/availability?date=YYYY-MM-DD
+POST /api/bookings
+GET  /api/bookings/mine?when=upcoming|past
+POST /api/bookings/:id/cancel
+POST /api/bookings/:id/confirm
+POST /api/bookings/:id/complete
+POST /api/bookings/:id/no-show
+GET  /api/businesses/:id/bookings
+```
+
 ```text
 GET  /api/categories
 GET  /api/businesses
@@ -197,6 +214,7 @@ Linting uses ESLint for the API and the Expo app, and Oxlint for the admin app (
 - Phase 2 — database: complete
 - Phase 3 — authentication: complete
 - Phase 4 — business management: complete
-- Bookings, reviews, notifications, and the rest of the admin dashboard: not started
+- Phase 5 — booking system: complete
+- Reviews, notifications, and the rest of the admin dashboard: not started
 
 `GET /api/health` does not query MySQL. Use `npm run db:check` to confirm the database connection.

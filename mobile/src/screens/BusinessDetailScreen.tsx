@@ -16,7 +16,7 @@ import {
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BusinessDetail'>;
 
-export function BusinessDetailScreen({ route }: Props) {
+export function BusinessDetailScreen({ navigation, route }: Props) {
   const { request } = useAuth();
   const [business, setBusiness] = useState<PublicBusiness | null>(null);
   const [services, setServices] = useState<PublicService[]>([]);
@@ -95,6 +95,7 @@ export function BusinessDetailScreen({ route }: Props) {
         <ListCard
           key={service.id}
           lines={[service.description, `${formatMoney(service.price)} · ${formatDuration(service.durationMinutes)}`]}
+          onPress={() => navigation.navigate('Book', { businessId: business.id, serviceId: service.id })}
           title={service.name}
         />
       ))}

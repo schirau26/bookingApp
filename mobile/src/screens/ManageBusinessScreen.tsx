@@ -152,6 +152,10 @@ export function ManageBusinessScreen({ navigation, route }: Props) {
         label="Edit details"
         onPress={() => navigation.navigate('BusinessForm', { businessId })}
       />
+      <SecondaryButton
+        label="View bookings"
+        onPress={() => navigation.navigate('OwnerBookings', { businessId })}
+      />
       <Text style={styles.section}>Logo</Text>
       {logo ? <Image source={{ uri: logo }} style={styles.logo} /> : null}
       <PrimaryButton

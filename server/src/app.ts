@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { notFoundHandler } from './middleware/notFound.js';
 import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
+import { bookingRouter } from './routes/bookings.js';
 import { businessRouter } from './routes/businesses.js';
 import { categoryRouter } from './routes/categories.js';
 import { healthRouter } from './routes/health.js';
@@ -32,6 +33,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/categories', categoryRouter);
   app.use('/api/businesses', businessRouter);
+  app.use('/api/bookings', bookingRouter);
   app.use('/api/admin', adminRouter);
   app.use(notFoundHandler);
   app.use(errorHandler);
