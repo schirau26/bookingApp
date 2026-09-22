@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './App.css';
 import { BusinessesPanel } from './Businesses';
+import { ReviewsPanel } from './Reviews';
 import {
   ApiError,
   apiRequest,
@@ -193,6 +194,7 @@ export default function App() {
         Signed in as {user.fullName} ({user.email}).
       </p>
       <BusinessesPanel />
+      <ReviewsPanel />
       <section className="card" aria-live="polite">
         <h2>API status</h2>
         {health.status === 'loading' ? <p>Checking the API…</p> : null}

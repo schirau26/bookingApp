@@ -13,6 +13,7 @@ export type BookingRecord = {
   status: BookingStatus;
   business: { id: string; name: string };
   service: { id: string; name: string };
+  review: { id: string } | null;
 };
 
 export const bookingStatusLabels: Record<BookingStatus, string> = {

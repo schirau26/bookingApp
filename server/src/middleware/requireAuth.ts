@@ -4,6 +4,14 @@ import { getAuthUser } from '../services/authService.js';
 import { verifyAccessToken } from '../services/tokens.js';
 import { HttpError } from './errorHandler.js';
 
+export const optionalAuth: RequestHandler = async (req, _res, next) => {
+  if (!req.header('authorization')) {
+    next();
+    return;
+  }
+  return requireAuth(req, _res, next);
+};
+
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   const header = req.header('authorization');
   if (!header) {

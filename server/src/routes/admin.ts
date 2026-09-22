@@ -7,7 +7,15 @@ import {
   rejectBusiness,
   suspendBusiness,
 } from '../services/businessService.js';
+import {
+  deleteReviewAsAdmin,
+  dismissReport,
+  listAdminReviews,
+  listReviewReports,
+  resolveReport,
+} from '../services/reviewService.js';
 import { adminBusinessQuerySchema, rejectBusinessSchema } from '../validators/business.js';
+import { adminReviewQuerySchema, reportQuerySchema } from '../validators/review.js';
 
 export const adminRouter = Router();
 
@@ -50,6 +58,47 @@ adminRouter.post('/businesses/:id/reject', ...adminOnly, async (req, res, next) 
 adminRouter.post('/businesses/:id/suspend', ...adminOnly, async (req, res, next) => {
   try {
     res.json(await suspendBusiness(idParam(req.params.id)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/reviews', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await listAdminReviews(adminReviewQuerySchema.parse(req.query)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.delete('/reviews/:id', ...adminOnly, async (req, res, next) => {
+  try {
+    await deleteReviewAsAdmin(idParam(req.params.id));
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/review-reports', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await listReviewReports(reportQuerySchema.parse(req.query)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/review-reports/:id/dismiss', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await dismissReport(idParam(req.params.id)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/review-reports/:id/resolve', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await resolveReport(idParam(req.params.id)));
   } catch (error) {
     next(error);
   }

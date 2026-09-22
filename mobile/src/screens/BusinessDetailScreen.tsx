@@ -13,6 +13,7 @@ import {
   type PublicBusiness,
   type PublicService,
 } from '../types/business';
+import { formatStars, type PublicReview } from '../types/review';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'BusinessDetail'>;
 
@@ -20,6 +21,7 @@ export function BusinessDetailScreen({ navigation, route }: Props) {
   const { request } = useAuth();
   const [business, setBusiness] = useState<PublicBusiness | null>(null);
   const [services, setServices] = useState<PublicService[]>([]);
+  const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,11 +30,13 @@ export function BusinessDetailScreen({ navigation, route }: Props) {
     Promise.all([
       request<{ business: PublicBusiness }>(`/api/businesses/${id}`),
       request<{ services: PublicService[] }>(`/api/businesses/${id}/services`),
+      request<{ reviews: PublicReview[] }>(`/api/businesses/${id}/reviews`),
     ])
-      .then(([detail, serviceBody]) => {
+      .then(([detail, serviceBody, reviewBody]) => {
         if (cancelled) return;
         setBusiness(detail.business);
         setServices(serviceBody.services);
+        setReviews(reviewBody.reviews);
       })
       .catch((caught: unknown) => {
         if (!cancelled) {
@@ -99,6 +103,24 @@ export function BusinessDetailScreen({ navigation, route }: Props) {
           title={service.name}
         />
       ))}
+      <Text style={styles.section}>Reviews</Text>
+      {reviews.length === 0 ? <Text style={styles.body}>No reviews yet.</Text> : null}
+      {reviews.map((review) => (
+        <View key={review.id} style={styles.review}>
+          <Text style={styles.body}>
+            {review.authorName} · {formatStars(review.rating)}
+          </Text>
+          <Text style={styles.body}>{review.body}</Text>
+          {review.replyBody ? <Text style={styles.reply}>Owner: {review.replyBody}</Text> : null}
+          {review.photos.length > 0 ? (
+            <View style={styles.photos}>
+              {review.photos.map((photo) => (
+                <Image key={photo.id} source={{ uri: mediaUrl(photo.url) ?? '' }} style={styles.photo} />
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ))}
     </ScrollScreen>
   );
 }
@@ -146,6 +168,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 96,
     width: 96,
+  },
+  review: {
+    marginBottom: 12,
+  },
+  reply: {
+    color: '#6b6256',
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 6,
   },
   error: {
     color: '#7f1d1d',

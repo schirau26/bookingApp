@@ -1,8 +1,9 @@
 import { Router, type RequestHandler } from 'express';
 import { Role } from '../generated/prisma/client.js';
-import { requireAuth, requireRole } from '../middleware/requireAuth.js';
+import { optionalAuth, requireAuth, requireRole } from '../middleware/requireAuth.js';
 import { imageUpload } from '../middleware/upload.js';
 import { listAvailability, listOwnerBookings } from '../services/bookingService.js';
+import { listBusinessReviews } from '../services/reviewService.js';
 import {
   addPhoto,
   createBusiness,
@@ -88,6 +89,14 @@ businessRouter.get('/:id/bookings', ...owner, async (req, res, next) => {
   try {
     const query = ownerBookingsQuerySchema.parse(req.query);
     res.json(await listOwnerBookings(req.authUser!.id, idParam(req.params.id), query));
+  } catch (error) {
+    next(error);
+  }
+});
+
+businessRouter.get('/:id/reviews', optionalAuth, async (req, res, next) => {
+  try {
+    res.json(await listBusinessReviews(idParam(req.params.id), req.authUser?.id));
   } catch (error) {
     next(error);
   }

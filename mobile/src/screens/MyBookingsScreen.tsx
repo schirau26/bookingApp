@@ -1,14 +1,18 @@
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ListCard, ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
+import type { CustomerStackParamList } from '../navigation/types';
 import { ApiError } from '../services/api';
 import { bookingStatusLabels, type BookingRecord } from '../types/booking';
 import { formatDuration, formatMoney } from '../types/business';
 import { formatWhen } from '../utils/schedule';
 
-export function MyBookingsScreen() {
+type Props = NativeStackScreenProps<CustomerStackParamList, 'MyBookings'>;
+
+export function MyBookingsScreen({ navigation }: Props) {
   const { request } = useAuth();
   const [when, setWhen] = useState<'upcoming' | 'past'>('upcoming');
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
@@ -84,6 +88,20 @@ export function MyBookingsScreen() {
             ]}
             title={booking.business.name}
           />
+          {booking.status === 'COMPLETED' ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                navigation.navigate('ReviewForm', {
+                  businessId: booking.business.id,
+                  ...(booking.review ? { reviewId: booking.review.id } : { bookingId: booking.id }),
+                })
+              }
+              style={styles.cancel}
+            >
+              <Text style={styles.reviewLabel}>{booking.review ? 'Edit review' : 'Write a review'}</Text>
+            </Pressable>
+          ) : null}
           {booking.status === 'PENDING' || booking.status === 'CONFIRMED' ? (
             <Pressable accessibilityRole="button" onPress={() => cancel(booking)} style={styles.cancel}>
               <Text style={styles.cancelLabel}>Cancel</Text>
@@ -135,6 +153,11 @@ const styles = StyleSheet.create({
   },
   cancelLabel: {
     color: '#7f1d1d',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  reviewLabel: {
+    color: '#1c1915',
     fontSize: 15,
     fontWeight: '600',
   },

@@ -16,6 +16,7 @@ const blockingStatuses: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 
 const bookingInclude = {
   business: { select: { id: true, name: true, ownerId: true } },
   service: { select: { id: true, name: true } },
+  review: { select: { id: true } },
 } satisfies Prisma.BookingInclude;
 
 type BookingWithRelations = Prisma.BookingGetPayload<{ include: typeof bookingInclude }>;
@@ -38,6 +39,7 @@ function toBooking(booking: BookingWithRelations) {
     status: booking.status,
     business: { id: booking.business.id, name: booking.business.name },
     service: { id: booking.service.id, name: booking.service.name },
+    review: booking.review ? { id: booking.review.id } : null,
   };
 }
 

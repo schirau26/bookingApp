@@ -12,6 +12,8 @@ import { ManageBusinessScreen } from '../screens/ManageBusinessScreen';
 import { MyBookingsScreen } from '../screens/MyBookingsScreen';
 import { MyBusinessesScreen } from '../screens/MyBusinessesScreen';
 import { OwnerBookingsScreen } from '../screens/OwnerBookingsScreen';
+import { OwnerReviewsScreen } from '../screens/OwnerReviewsScreen';
+import { ReviewFormScreen } from '../screens/ReviewFormScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { ServiceFormScreen } from '../screens/ServiceFormScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
@@ -82,6 +84,7 @@ export function RootNavigator() {
           <OwnerStack.Screen component={ManageBusinessScreen} name="ManageBusiness" options={{ title: 'Manage' }} />
           <OwnerStack.Screen component={ServiceFormScreen} name="ServiceForm" options={{ title: 'Service' }} />
           <OwnerStack.Screen component={OwnerBookingsScreen} name="OwnerBookings" options={{ title: 'Bookings' }} />
+          <OwnerStack.Screen component={OwnerReviewsScreen} name="OwnerReviews" options={{ title: 'Reviews' }} />
         </OwnerStack.Navigator>
       ) : user.role === 'ADMIN' ? (
         <AdminStack.Navigator screenOptions={screenOptions}>
@@ -97,6 +100,7 @@ export function RootNavigator() {
           />
           <CustomerStack.Screen component={BookScreen} name="Book" options={{ title: 'Book' }} />
           <CustomerStack.Screen component={MyBookingsScreen} name="MyBookings" options={{ title: 'My bookings' }} />
+          <CustomerStack.Screen component={ReviewFormScreen} name="ReviewForm" options={{ title: 'Review' }} />
         </CustomerStack.Navigator>
       )}
     </NavigationContainer>

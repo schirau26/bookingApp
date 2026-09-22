@@ -170,6 +170,28 @@ POST /api/bookings/:id/no-show
 GET  /api/businesses/:id/bookings
 ```
 
+## Reviews
+
+A customer can review a business after one of their bookings there is completed. Each customer has one review per business. Editing replaces that review, and deleting it allows a later booking to be reviewed. The written review is required, the rating is 1 to 5, and up to four photos can be attached. Creating, editing, or deleting a review recalculates that business’s average rating and review count.
+
+The business owner can reply once (a new reply replaces the old one) and can report a review. A report stays open until an administrator dismisses it or marks it resolved. Reporting does not hide the review. An administrator can also delete a review, which updates the cached rating.
+
+```text
+POST   /api/reviews
+PATCH  /api/reviews/:id
+DELETE /api/reviews/:id
+POST   /api/reviews/:id/photos
+DELETE /api/reviews/:id/photos/:photoId
+GET    /api/businesses/:id/reviews
+PUT    /api/reviews/:id/reply
+POST   /api/reviews/:id/reports
+GET    /api/admin/reviews
+DELETE /api/admin/reviews/:id
+GET    /api/admin/review-reports?status=
+POST   /api/admin/review-reports/:id/dismiss
+POST   /api/admin/review-reports/:id/resolve
+```
+
 ```text
 GET  /api/categories
 GET  /api/businesses
@@ -215,6 +237,7 @@ Linting uses ESLint for the API and the Expo app, and Oxlint for the admin app (
 - Phase 3 — authentication: complete
 - Phase 4 — business management: complete
 - Phase 5 — booking system: complete
-- Reviews, notifications, and the rest of the admin dashboard: not started
+- Phase 6 — reviews: complete
+- Notifications and the rest of the admin dashboard: not started
 
 `GET /api/health` does not query MySQL. Use `npm run db:check` to confirm the database connection.

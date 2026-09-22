@@ -3,6 +3,7 @@ export type CustomerStackParamList = {
   BusinessDetail: { businessId: string };
   Book: { businessId: string; serviceId: string };
   MyBookings: undefined;
+  ReviewForm: { businessId: string; bookingId?: string; reviewId?: string };
 };
 
 export type OwnerStackParamList = {
@@ -11,6 +12,7 @@ export type OwnerStackParamList = {
   ManageBusiness: { businessId: string };
   ServiceForm: { businessId: string; serviceId?: string };
   OwnerBookings: { businessId: string };
+  OwnerReviews: { businessId: string };
 };
 
 export type AdminStackParamList = {
