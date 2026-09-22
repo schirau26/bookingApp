@@ -4,3 +4,5 @@ build
 coverage
 .expo
 package-lock.json
+server/src/generated
+*.prisma

@@ -1,0 +1,271 @@
+// V1 uses a role enum instead of a Role table. The three roles are fixed.
+// OAuth can be added later by making passwordHash optional and storing a provider id.
+// Staff scheduling is intentionally absent: a business has one shared calendar.
+// Service photos are a single imageUrl. A ServicePhoto table can be added later.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  CUSTOMER
+  BUSINESS_OWNER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum BusinessApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ReviewReportStatus {
+  OPEN
+  DISMISSED
+  RESOLVED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMATION
+  BOOKING_CANCELLATION
+  BOOKING_REMINDER
+  BOOKING_RESCHEDULED
+  NEW_REVIEW
+  REVIEW_REPLY
+}
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  passwordHash    String
+  fullName        String
+  phone           String?    @db.VarChar(32)
+  profileImageUrl String?    @db.VarChar(2048)
+  role            Role
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  ownedBusinesses Business[]
+  bookings        Booking[]
+  reviews         Review[]
+  reviewReports   ReviewReport[]
+  notifications   Notification[]
+
+  @@index([role])
+  @@index([status])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  businesses Business[]
+}
+
+model Business {
+  id              String                 @id @default(cuid())
+  ownerId         String
+  categoryId      String
+  name            String
+  description     String                 @db.Text
+  address         String                 @db.VarChar(255)
+  phone           String                 @db.VarChar(32)
+  email           String
+  logoUrl         String?                @db.VarChar(2048)
+  approvalStatus  BusinessApprovalStatus @default(PENDING)
+  rejectionReason String?                @db.Text
+  averageRating   Decimal                @default(0) @db.Decimal(3, 2)
+  reviewCount     Int                    @default(0)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  owner        User                  @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  category     Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  services     Service[]
+  workingHours BusinessWorkingHour[]
+  photos       BusinessPhoto[]
+  bookings     Booking[]
+  reviews      Review[]
+
+  @@index([approvalStatus, categoryId])
+  @@index([name])
+}
+
+model BusinessPhoto {
+  id         String   @id @default(cuid())
+  businessId String
+  url        String   @db.VarChar(2048)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, sortOrder])
+}
+
+model BusinessWorkingHour {
+  id         String    @id @default(cuid())
+  businessId String
+  dayOfWeek  DayOfWeek
+  isClosed   Boolean   @default(false)
+  // HH:mm. Null only when the day is closed.
+  openTime   String?   @db.VarChar(5)
+  closeTime  String?   @db.VarChar(5)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, dayOfWeek])
+}
+
+model Service {
+  id              String   @id @default(cuid())
+  businessId      String
+  name            String
+  description     String   @db.Text
+  price           Decimal  @db.Decimal(10, 2)
+  durationMinutes Int
+  imageUrl        String?  @db.VarChar(2048)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  bookings Booking[]
+
+  @@index([businessId, isActive])
+  @@index([name])
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  customerId      String
+  businessId      String
+  serviceId       String
+  startsAt        DateTime
+  endsAt          DateTime
+  customerName    String
+  customerPhone   String        @db.VarChar(32)
+  customerEmail   String
+  note            String?       @db.Text
+  price           Decimal       @db.Decimal(10, 2)
+  durationMinutes Int
+  status          BookingStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer      User           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  review        Review?
+  notifications Notification[]
+
+  // Availability queries filter by business and start time.
+  // MySQL cannot exclude overlapping ranges, so Phase 5 must lock the
+  // business row and recheck overlaps inside a transaction.
+  @@index([businessId, startsAt])
+  @@index([customerId, startsAt])
+  @@index([status])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  businessId String
+  bookingId  String   @unique
+  rating     Int
+  body       String   @db.Text
+  replyBody  String?  @db.Text
+  repliedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  booking       Booking        @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  photos        ReviewPhoto[]
+  reports       ReviewReport[]
+  notifications Notification[]
+
+  // One review per customer per business, enforced in the database.
+  @@unique([userId, businessId])
+  @@index([businessId, createdAt])
+}
+
+model ReviewPhoto {
+  id        String   @id @default(cuid())
+  reviewId  String
+  url       String   @db.VarChar(2048)
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+}
+
+model ReviewReport {
+  id         String             @id @default(cuid())
+  reviewId   String
+  reporterId String
+  reason     String             @db.Text
+  status     ReviewReportStatus @default(OPEN)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporter User   @relation(fields: [reporterId], references: [id], onDelete: Restrict)
+
+  @@unique([reviewId, reporterId])
+  @@index([status])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  isRead    Boolean          @default(false)
+  bookingId String?
+  reviewId  String?
+  createdAt DateTime         @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  review  Review?  @relation(fields: [reviewId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead, createdAt])
+}

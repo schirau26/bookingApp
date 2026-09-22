@@ -13,6 +13,7 @@ coverage/
 .expo-shared/
 web-build/
 .vite/
+server/src/generated/
 
 .DS_Store
 Thumbs.db
