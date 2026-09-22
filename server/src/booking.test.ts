@@ -208,6 +208,13 @@ describe('bookings', () => {
     ]);
     expect(closed.status).toBe(200);
     expect(closed.body.slots).toEqual([]);
+
+    const customer = await register('CUSTOMER');
+    const closedBooking = await request(app)
+      .post('/api/bookings')
+      .set(auth(customer.accessToken))
+      .send(bookingBody(businessId, serviceId, windhoekDateTime(closedDate, '09:00').toISOString(), customer.user));
+    expect(closedBooking.status).toBe(409);
   });
 
   it('rejects unapproved businesses, inactive services, and times outside the schedule', async () => {
@@ -261,8 +268,21 @@ describe('bookings', () => {
       .set(auth(customer.accessToken))
       .send(bookingBody(businessId, serviceId, outside, customer.user));
 
+    const inactiveBooking = await request(app)
+      .post('/api/bookings')
+      .set(auth(customer.accessToken))
+      .send(
+        bookingBody(
+          businessId,
+          inactive.body.service.id as string,
+          windhoekDateTime(openDate, '09:00').toISOString(),
+          customer.user,
+        ),
+      );
+
     expect(pendingAvailability.status).toBe(404);
     expect(inactiveAvailability.status).toBe(404);
+    expect(inactiveBooking.status).toBe(404);
     expect(outsideBooking.status).toBe(409);
   });
 

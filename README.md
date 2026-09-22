@@ -265,5 +265,6 @@ Linting uses ESLint for the API and the Expo app, and Oxlint for the admin app (
 - Phase 6 — reviews: complete
 - Phase 7 — notifications: complete
 - Phase 8 — admin dashboard: complete
+- Phase 9 — testing: complete
 
 `GET /api/health` does not query MySQL. Use `npm run db:check` to confirm the database connection.

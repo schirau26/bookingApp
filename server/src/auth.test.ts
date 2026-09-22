@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import { SignJWT } from 'jose';
 import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
+import { env } from './config/env.js';
 import { prisma } from './db/prisma.js';
 import { createApp } from './app.js';
 import { hashPassword } from './utils/password.js';
@@ -155,6 +157,17 @@ describe('authentication', () => {
     expect(adminLogin.status).toBe(200);
     expect(adminMe.status).toBe(200);
     expect(adminMe.body.user.role).toBe('ADMIN');
+
+    const garbage = await request(app).get('/api/auth/me').set('Authorization', 'Bearer not-a-token');
+    const expiredToken = await new SignJWT({ role: 'CUSTOMER' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(customer.body.user.id)
+      .setIssuedAt(Math.floor(Date.now() / 1000) - 3600)
+      .setExpirationTime(Math.floor(Date.now() / 1000) - 60)
+      .sign(new TextEncoder().encode(env.JWT_ACCESS_SECRET));
+    const expired = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${expiredToken}`);
+    expect(garbage.status).toBe(401);
+    expect(expired.status).toBe(401);
   });
 
   it('revokes a refresh token on logout and rotates it on refresh', async () => {
