@@ -14,6 +14,18 @@ import {
   listReviewReports,
   resolveReport,
 } from '../services/reviewService.js';
+import {
+  activateUser,
+  adminStats,
+  createCategory,
+  deleteCategory,
+  listAdminBookings,
+  listAdminCategories,
+  listAdminUsers,
+  suspendUser,
+  updateCategory,
+} from '../services/adminService.js';
+import { adminBookingQuerySchema, adminUserQuerySchema, categoryBodySchema } from '../validators/admin.js';
 import { adminBusinessQuerySchema, rejectBusinessSchema } from '../validators/business.js';
 import { adminReviewQuerySchema, reportQuerySchema } from '../validators/review.js';
 
@@ -27,6 +39,79 @@ function idParam(value: string | string[]) {
 
 adminRouter.get('/me', ...adminOnly, (req, res) => {
   res.json({ user: req.authUser });
+});
+
+adminRouter.get('/stats', ...adminOnly, async (_req, res, next) => {
+  try {
+    res.json(await adminStats());
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/users', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await listAdminUsers(adminUserQuerySchema.parse(req.query)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/users/:id/suspend', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await suspendUser(req.authUser!.id, idParam(req.params.id)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/users/:id/activate', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await activateUser(req.authUser!.id, idParam(req.params.id)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/bookings', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await listAdminBookings(adminBookingQuerySchema.parse(req.query)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/categories', ...adminOnly, async (_req, res, next) => {
+  try {
+    res.json(await listAdminCategories());
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/categories', ...adminOnly, async (req, res, next) => {
+  try {
+    res.status(201).json(await createCategory(categoryBodySchema.parse(req.body)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.patch('/categories/:id', ...adminOnly, async (req, res, next) => {
+  try {
+    res.json(await updateCategory(idParam(req.params.id), categoryBodySchema.parse(req.body)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.delete('/categories/:id', ...adminOnly, async (req, res, next) => {
+  try {
+    await deleteCategory(idParam(req.params.id));
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
 });
 
 adminRouter.get('/businesses', ...adminOnly, async (req, res, next) => {

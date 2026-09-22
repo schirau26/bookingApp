@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import './App.css';
+import { BookingsPanel } from './Bookings';
 import { BusinessesPanel } from './Businesses';
+import { CategoriesPanel } from './Categories';
+import { OverviewPanel } from './Overview';
 import { ReviewsPanel } from './Reviews';
+import { UsersPanel } from './Users';
 import {
   ApiError,
   apiRequest,
@@ -13,6 +17,17 @@ import {
 } from './api';
 
 type HealthState = { status: 'loading' } | { status: 'ok' } | { status: 'error'; message: string };
+
+type Section = 'overview' | 'users' | 'businesses' | 'bookings' | 'reviews' | 'categories';
+
+const sections: Array<{ id: Section; label: string }> = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'users', label: 'Users' },
+  { id: 'businesses', label: 'Businesses' },
+  { id: 'bookings', label: 'Bookings' },
+  { id: 'reviews', label: 'Reviews' },
+  { id: 'categories', label: 'Categories' },
+];
 
 type SessionResponse = {
   user: PublicUser;
@@ -38,6 +53,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [health, setHealth] = useState<HealthState>({ status: 'loading' });
+  const [section, setSection] = useState<Section>('overview');
 
   useEffect(() => {
     const stored = readSession();
@@ -193,8 +209,24 @@ export default function App() {
       <p className="intro">
         Signed in as {user.fullName} ({user.email}).
       </p>
-      <BusinessesPanel />
-      <ReviewsPanel />
+      <nav className="nav" aria-label="Admin sections">
+        {sections.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            aria-current={section === item.id ? 'page' : undefined}
+            onClick={() => setSection(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      {section === 'overview' ? <OverviewPanel /> : null}
+      {section === 'users' ? <UsersPanel currentUserId={user.id} /> : null}
+      {section === 'businesses' ? <BusinessesPanel /> : null}
+      {section === 'bookings' ? <BookingsPanel /> : null}
+      {section === 'reviews' ? <ReviewsPanel /> : null}
+      {section === 'categories' ? <CategoriesPanel /> : null}
       <section className="card" aria-live="polite">
         <h2>API status</h2>
         {health.status === 'loading' ? <p>Checking the API…</p> : null}

@@ -121,6 +121,59 @@ h1 {
   margin-top: 24px;
 }
 
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nav button {
+  border: 1px solid #e4ddd2;
+  border-radius: 999px;
+  background: #fff;
+  color: #1c1915;
+  font: inherit;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
+.nav button[aria-current='page'] {
+  border-color: #1c1915;
+  background: #1c1915;
+  color: #fff;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.card .stat {
+  display: block;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e4ddd2;
+  border-radius: 12px;
+}
+
+.stat strong {
+  display: block;
+  color: #1c1915;
+  font-size: 24px;
+}
+
+.confirm input {
+  border: 1px solid #e4ddd2;
+  border-radius: 12px;
+  font: inherit;
+  min-height: 44px;
+  padding: 8px 12px;
+  width: 100%;
+}
+
 .toolbar,
 .pager,
 .actions,

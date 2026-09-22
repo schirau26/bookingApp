@@ -201,6 +201,22 @@ GET   /api/notifications
 PATCH /api/notifications/:id
 ```
 
+## Admin dashboard
+
+Administrators use the web dashboard. The overview shows counts and the newest bookings and reviews. Users can be suspended and activated, except the signed-in administrator. Business approval and review moderation stay as they were. Bookings are listed only. Categories can be added and renamed. A category that still has a business cannot be deleted.
+
+```text
+GET    /api/admin/stats
+GET    /api/admin/users?q=&role=&status=
+POST   /api/admin/users/:id/suspend
+POST   /api/admin/users/:id/activate
+GET    /api/admin/bookings?q=&status=
+GET    /api/admin/categories
+POST   /api/admin/categories
+PATCH  /api/admin/categories/:id
+DELETE /api/admin/categories/:id
+```
+
 ```text
 GET  /api/categories
 GET  /api/businesses
@@ -248,6 +264,6 @@ Linting uses ESLint for the API and the Expo app, and Oxlint for the admin app (
 - Phase 5 — booking system: complete
 - Phase 6 — reviews: complete
 - Phase 7 — notifications: complete
-- The rest of the admin dashboard: not started
+- Phase 8 — admin dashboard: complete
 
 `GET /api/health` does not query MySQL. Use `npm run db:check` to confirm the database connection.
