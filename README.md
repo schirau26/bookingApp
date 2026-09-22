@@ -40,12 +40,14 @@ cp admin/.env.example admin/.env
 
 ### API environment
 
-| Variable       | Purpose                                                 | Default                                          |
-| -------------- | ------------------------------------------------------- | ------------------------------------------------ |
-| `PORT`         | HTTP port                                               | `4000`                                           |
-| `NODE_ENV`     | `development`, `test`, or `production`                  | `development`                                    |
-| `CORS_ORIGINS` | Comma-separated browser origins allowed to call the API | `http://localhost:5173`                          |
-| `DATABASE_URL` | MySQL connection string                                 | `mysql://booking:booking@127.0.0.1:3306/booking` |
+| Variable                 | Purpose                                                    | Default                                          |
+| ------------------------ | ---------------------------------------------------------- | ------------------------------------------------ |
+| `PORT`                   | HTTP port                                                  | `4000`                                           |
+| `NODE_ENV`               | `development`, `test`, or `production`                     | `development`                                    |
+| `CORS_ORIGINS`           | Comma-separated browser origins allowed to call the API    | `http://localhost:5173`                          |
+| `DATABASE_URL`           | MySQL connection string                                    | `mysql://booking:booking@127.0.0.1:3306/booking` |
+| `JWT_ACCESS_SECRET`      | Secret used to sign access tokens. At least 32 characters. | none                                             |
+| `JWT_ACCESS_TTL_SECONDS` | Access token lifetime in seconds                           | `900`                                            |
 
 The admin app reads `VITE_API_URL` (default `http://localhost:4000`).
 
@@ -124,6 +126,23 @@ Indexes used for later queries include approval status plus category, service ac
 
 Seed data creates the nine categories, five example.com users, and four Windhoek businesses (approved, pending, rejected, and suspended) with services and weekly hours. Every seed account uses the local password `Password1!`. Bookings and reviews are not seeded.
 
+## Authentication
+
+Email and password only. Customers and business owners can register. Administrator accounts are created in the database, not through registration. The seeded admin is `admin@example.com`.
+
+Login returns a short-lived access token and a refresh token. The refresh token is stored as a SHA-256 hash. Logout revokes it. `GET /api/auth/me` requires a signed-in user. `GET /api/admin/me` requires an administrator. A suspended account cannot sign in, and an existing access token is rejected after the account is suspended.
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+GET  /api/auth/me
+GET  /api/admin/me
+```
+
+Passwords must be 8 to 72 characters and include a letter and a number. The mobile app stores tokens in the device secure store. The admin app keeps them in `sessionStorage` for the browser tab.
+
 ## Run
 
 Use three terminals:
@@ -152,6 +171,7 @@ Linting uses ESLint for the API and the Expo app, and Oxlint for the admin app (
 
 - Phase 1 — project setup: complete
 - Phase 2 — database: complete
-- Authentication, businesses, bookings, reviews, notifications, and the admin dashboard UI: not started
+- Phase 3 — authentication: complete
+- Businesses, bookings, reviews, notifications, and the admin dashboard UI: not started
 
 `GET /api/health` does not query MySQL. Use `npm run db:check` to confirm the database connection.

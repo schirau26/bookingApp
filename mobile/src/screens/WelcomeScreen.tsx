@@ -1,28 +1,27 @@
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import { PrimaryButton, Screen, SecondaryButton } from '../components/Form';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 
-export function WelcomeScreen() {
+type Props = NativeStackScreenProps<RootStackParamList, 'Welcome'>;
+
+export function WelcomeScreen({ navigation }: Props) {
   return (
-    <View style={styles.container}>
+    <Screen>
       <Text style={styles.eyebrow}>Booking platform</Text>
       <Text style={styles.title}>Find a service and reserve a time.</Text>
       <Text style={styles.body}>
-        This is the mobile app shell for customers and business owners. Sign-in and booking arrive
-        in later phases.
+        Sign in as a customer or a business owner. Booking tools arrive in a later phase.
       </Text>
+      <PrimaryButton label="Sign in" onPress={() => navigation.navigate('Login')} />
+      <SecondaryButton label="Create an account" onPress={() => navigation.navigate('Register')} />
       <StatusBar style="dark" />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f6f4ef',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
   eyebrow: {
     color: '#6b6256',
     fontSize: 14,
@@ -42,6 +41,7 @@ const styles = StyleSheet.create({
     color: '#3f3832',
     fontSize: 17,
     lineHeight: 26,
+    marginBottom: 24,
     maxWidth: 420,
   },
 });

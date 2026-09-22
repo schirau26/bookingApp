@@ -8,6 +8,8 @@ const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .regex(/^mysql:\/\/.+/, 'DATABASE_URL must be a mysql:// connection string'),
+  JWT_ACCESS_SECRET: z.string().min(32),
+  JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
 });
 
 const parsed = envSchema.safeParse(process.env);

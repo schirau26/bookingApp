@@ -80,6 +80,7 @@ model User {
   reviews         Review[]
   reviewReports   ReviewReport[]
   notifications   Notification[]
+  refreshTokens   RefreshToken[]
 
   @@index([role])
   @@index([status])
@@ -250,6 +251,17 @@ model ReviewReport {
 
   @@unique([reviewId, reporterId])
   @@index([status])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique @db.VarChar(64)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {

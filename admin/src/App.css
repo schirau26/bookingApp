@@ -68,3 +68,47 @@ h1 {
   color: #3f3832;
   font-size: 14px;
 }
+
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.form label {
+  display: grid;
+  gap: 6px;
+  color: #3f3832;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.form input {
+  border: 1px solid #e4ddd2;
+  border-radius: 12px;
+  font: inherit;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.form button,
+.logout {
+  border: 0;
+  border-radius: 12px;
+  background: #1c1915;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 8px 16px;
+}
+
+.logout {
+  margin-top: 16px;
+}
+
+.form-error {
+  display: block;
+  color: #7f1d1d;
+  margin: 0;
+}
