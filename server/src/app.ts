@@ -10,6 +10,7 @@ import { bookingRouter } from './routes/bookings.js';
 import { businessRouter } from './routes/businesses.js';
 import { categoryRouter } from './routes/categories.js';
 import { healthRouter } from './routes/health.js';
+import { notificationRouter } from './routes/notifications.js';
 import { reviewRouter } from './routes/reviews.js';
 import { uploadsDirectory, uploadsPublicPath } from './storage/files.js';
 
@@ -36,6 +37,7 @@ export function createApp() {
   app.use('/api/businesses', businessRouter);
   app.use('/api/bookings', bookingRouter);
   app.use('/api/reviews', reviewRouter);
+  app.use('/api/notifications', notificationRouter);
   app.use('/api/admin', adminRouter);
   app.use(notFoundHandler);
   app.use(errorHandler);

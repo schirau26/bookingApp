@@ -10,6 +10,7 @@ import {
   type TimeRange,
 } from './availability.js';
 import type { CreateBookingInput, MyBookingsQuery, OwnerBookingsQuery } from '../validators/booking.js';
+import { createNotification, formatVisitTime } from './notificationService.js';
 
 const blockingStatuses: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'NO_SHOW'];
 
@@ -224,11 +225,34 @@ export async function cancelBooking(bookingId: string, userId: string) {
     data: { status: 'CANCELLED' },
     include: bookingInclude,
   });
+  const when = formatVisitTime(updated.startsAt);
+  const cancelledByCustomer = userId === updated.customerId;
+  await createNotification({
+    userId: cancelledByCustomer ? updated.business.ownerId : updated.customerId,
+    type: 'BOOKING_CANCELLATION',
+    title: 'Booking cancelled',
+    message: cancelledByCustomer
+      ? `${updated.customerName} cancelled ${updated.service.name} on ${when}.`
+      : `${updated.business.name} cancelled ${updated.service.name} on ${when}.`,
+    bookingId: updated.id,
+  });
   return { booking: toBooking(updated) };
 }
 
-export function confirmBooking(bookingId: string, ownerId: string) {
-  return changeStatus(bookingId, ownerId, ['PENDING'], 'CONFIRMED');
+export async function confirmBooking(bookingId: string, ownerId: string) {
+  const result = await changeStatus(bookingId, ownerId, ['PENDING'], 'CONFIRMED');
+  const booking = await prisma.booking.findUniqueOrThrow({
+    where: { id: bookingId },
+    include: bookingInclude,
+  });
+  await createNotification({
+    userId: booking.customerId,
+    type: 'BOOKING_CONFIRMATION',
+    title: 'Booking confirmed',
+    message: `${booking.business.name} confirmed ${booking.service.name} for ${formatVisitTime(booking.startsAt)}.`,
+    bookingId: booking.id,
+  });
+  return result;
 }
 
 export function completeBooking(bookingId: string, ownerId: string) {

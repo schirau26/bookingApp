@@ -2,7 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { ListCard, PrimaryButton, ScrollScreen } from '../components/Form';
+import { ListCard, PrimaryButton, ScrollScreen, SecondaryButton } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
 import type { OwnerStackParamList } from '../navigation/types';
 import { ApiError } from '../services/api';
@@ -42,6 +42,7 @@ export function MyBusinessesScreen({ navigation }: Props) {
     <ScrollScreen>
       <Text style={styles.intro}>Create a business, then add services, hours, and photos.</Text>
       <PrimaryButton label="New business" onPress={() => navigation.navigate('BusinessForm', {})} />
+      <SecondaryButton label="Inbox" onPress={() => navigation.navigate('Notifications')} />
       {loading ? <ActivityIndicator style={styles.spinner} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {!loading && businesses.length === 0 ? (

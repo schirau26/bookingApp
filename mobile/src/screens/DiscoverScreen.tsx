@@ -136,6 +136,7 @@ export function DiscoverScreen({ navigation }: Props) {
     <ScrollScreen onRefresh={() => void refresh()} refreshing={refreshing}>
       <Text style={styles.intro}>Approved businesses with open appointment times.</Text>
       <SecondaryButton label="My bookings" onPress={() => navigation.navigate('MyBookings')} />
+      <SecondaryButton label="Inbox" onPress={() => navigation.navigate('Notifications')} />
       <TextInput
         accessibilityLabel="Search businesses"
         autoCapitalize="none"

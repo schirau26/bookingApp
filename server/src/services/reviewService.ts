@@ -8,6 +8,7 @@ import type {
   ReportQuery,
   UpdateReviewInput,
 } from '../validators/review.js';
+import { createNotification } from './notificationService.js';
 
 const MAX_PHOTOS = 4;
 
@@ -115,6 +116,16 @@ export async function createReview(userId: string, input: CreateReviewInput) {
         include: reviewInclude,
       });
       await refreshBusinessRating(booking.businessId, tx);
+      await createNotification(
+        {
+          userId: created.business.ownerId,
+          type: 'NEW_REVIEW',
+          title: 'New review',
+          message: `${created.user.fullName} left a ${created.rating}/5 review for ${created.business.name}.`,
+          reviewId: created.id,
+        },
+        tx,
+      );
       return created;
     });
     return { review: toReview(review) };
@@ -190,6 +201,15 @@ export async function replyToReview(ownerId: string, reviewId: string, body: str
     data: { replyBody: body, repliedAt: new Date() },
     include: reviewInclude,
   });
+  if (updated.userId !== ownerId) {
+    await createNotification({
+      userId: updated.userId,
+      type: 'REVIEW_REPLY',
+      title: 'Review reply',
+      message: `${updated.business.name} replied to your review.`,
+      reviewId: updated.id,
+    });
+  }
   return { review: toReview(updated) };
 }
 

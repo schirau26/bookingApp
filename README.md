@@ -192,6 +192,15 @@ POST   /api/admin/review-reports/:id/dismiss
 POST   /api/admin/review-reports/:id/resolve
 ```
 
+## Notifications
+
+Notifications stay in the app. Confirming a booking tells the customer. Cancelling tells the other person. A new review tells the owner, and a reply tells the customer. Editing a review does not send another notice. Opening the inbox adds one reminder for a confirmed booking that starts within 24 hours, for the customer and for the owner. A second open does not add another. There is no reschedule action yet, so that notification type is unused. Push and SMS are not sent. Every notice is written through one function so a push sender can be added later without changing booking or review code.
+
+```text
+GET   /api/notifications
+PATCH /api/notifications/:id
+```
+
 ```text
 GET  /api/categories
 GET  /api/businesses
@@ -238,6 +247,7 @@ Linting uses ESLint for the API and the Expo app, and Oxlint for the admin app (
 - Phase 4 — business management: complete
 - Phase 5 — booking system: complete
 - Phase 6 — reviews: complete
-- Notifications and the rest of the admin dashboard: not started
+- Phase 7 — notifications: complete
+- The rest of the admin dashboard: not started
 
 `GET /api/health` does not query MySQL. Use `npm run db:check` to confirm the database connection.

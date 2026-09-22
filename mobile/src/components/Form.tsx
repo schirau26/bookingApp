@@ -92,13 +92,15 @@ export function ListCard({
   title,
   lines,
   onPress,
+  unread,
 }: {
   title: string;
   lines: string[];
   onPress?: () => void;
+  unread?: boolean;
 }) {
   const content = (
-    <View style={styles.card}>
+    <View style={[styles.card, unread ? styles.cardUnread : null]}>
       <Text style={styles.cardTitle}>{title}</Text>
       {lines.map((line, index) => (
         <Text key={`${index}-${line}`} style={styles.cardLine}>
@@ -189,6 +191,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 12,
     padding: 16,
+  },
+  cardUnread: {
+    borderColor: '#1c1915',
   },
   cardTitle: {
     color: '#1c1915',
