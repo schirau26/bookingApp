@@ -4,12 +4,10 @@
   "version": "0.1.0",
   "workspaces": [
     "mobile",
-    "server",
-    "admin"
+    "server"
   ],
   "scripts": {
     "dev:server": "npm run dev -w @booking/server",
-    "dev:admin": "npm run dev -w @booking/admin",
     "dev:mobile": "npm run start -w @booking/mobile",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",

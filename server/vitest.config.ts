@@ -6,5 +6,6 @@ process.env.JWT_ACCESS_SECRET ??= 'test-only-access-secret-with-32-characters';
 export default defineConfig({
   test: {
     environment: 'node',
+    fileParallelism: false,
   },
 });

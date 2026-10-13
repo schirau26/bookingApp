@@ -1,16 +1,21 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { CompositeScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { ListCard, ScrollScreen } from '../components/Form';
+import { ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
-import type { CustomerStackParamList } from '../navigation/types';
+import type { BookingsStackParamList, CustomerRootParamList } from '../navigation/types';
 import { ApiError } from '../services/api';
-import { bookingStatusLabels, type BookingRecord } from '../types/booking';
+import { colors } from '../theme/colors';
+import { bookingStatusLabels, vehicleSizeLabels, type BookingRecord } from '../types/booking';
 import { formatDuration, formatMoney } from '../types/business';
 import { formatWhen } from '../utils/schedule';
 
-type Props = NativeStackScreenProps<CustomerStackParamList, 'MyBookings'>;
+type Props = CompositeScreenProps<
+  NativeStackScreenProps<BookingsStackParamList, 'MyBookings'>,
+  NativeStackScreenProps<CustomerRootParamList>
+>;
 
 export function MyBookingsScreen({ navigation }: Props) {
   const { request } = useAuth();
@@ -80,22 +85,39 @@ export function MyBookingsScreen({ navigation }: Props) {
           );
         })}
       </View>
-      {loading ? <ActivityIndicator style={styles.spinner} /> : null}
+      {loading ? <ActivityIndicator color={colors.blue} style={styles.spinner} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {!loading && !error && bookings.length === 0 ? (
         <Text style={styles.empty}>No {when} bookings.</Text>
       ) : null}
       {bookings.map((booking) => (
-        <View key={booking.id}>
-          <ListCard
-            lines={[
-              booking.service.name,
-              formatWhen(booking.startsAt),
-              `${formatMoney(booking.price)} · ${formatDuration(booking.durationMinutes)}`,
-              bookingStatusLabels[booking.status],
-            ]}
-            title={booking.business.name}
-          />
+        <View key={booking.id} style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardCopy}>
+              <Text style={styles.cardTitle}>{booking.service.name}</Text>
+              <Text style={styles.cardLine}>{formatWhen(booking.startsAt)}</Text>
+              <Text style={styles.cardLine}>
+                {booking.registration} · {vehicleSizeLabels[booking.vehicleSize]}
+              </Text>
+              <Text style={styles.cardLine}>
+                {formatDuration(booking.durationMinutes)} · {formatMoney(booking.price)}
+              </Text>
+            </View>
+            <View style={[styles.status, statusTone(booking.status)]}>
+              <Text style={[styles.statusLabel, statusText(booking.status)]}>
+                {bookingStatusLabels[booking.status].toUpperCase()}
+              </Text>
+            </View>
+          </View>
+          {booking.status === 'READY' || booking.status === 'COMPLETED' ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('Invoice', { bookingId: booking.id })}
+              style={styles.action}
+            >
+              <Text style={styles.reviewLabel}>{booking.invoice ? 'View invoice' : 'Invoice'}</Text>
+            </Pressable>
+          ) : null}
           {booking.status === 'COMPLETED' ? (
             <Pressable
               accessibilityRole="button"
@@ -105,13 +127,13 @@ export function MyBookingsScreen({ navigation }: Props) {
                   ...(booking.review ? { reviewId: booking.review.id } : { bookingId: booking.id }),
                 })
               }
-              style={styles.cancel}
+              style={styles.action}
             >
               <Text style={styles.reviewLabel}>{booking.review ? 'Edit review' : 'Write a review'}</Text>
             </Pressable>
           ) : null}
-          {booking.status === 'PENDING' || booking.status === 'CONFIRMED' ? (
-            <Pressable accessibilityRole="button" onPress={() => cancel(booking)} style={styles.cancel}>
+          {booking.status === 'CONFIRMED' ? (
+            <Pressable accessibilityRole="button" onPress={() => cancel(booking)} style={styles.action}>
               <Text style={styles.cancelLabel}>Cancel</Text>
             </Pressable>
           ) : null}
@@ -121,6 +143,22 @@ export function MyBookingsScreen({ navigation }: Props) {
   );
 }
 
+function statusTone(status: BookingRecord['status']) {
+  if (status === 'ARRIVED') return { backgroundColor: '#E7EEF8' };
+  if (status === 'WASHING') return { backgroundColor: '#F3E8FF' };
+  if (status === 'READY' || status === 'COMPLETED') return { backgroundColor: '#E7F6EC' };
+  if (status === 'CANCELLED' || status === 'NO_SHOW') return { backgroundColor: '#FDECEC' };
+  return { backgroundColor: '#FFF6D8' };
+}
+
+function statusText(status: BookingRecord['status']) {
+  if (status === 'ARRIVED') return { color: colors.arrived };
+  if (status === 'WASHING') return { color: colors.washing };
+  if (status === 'READY' || status === 'COMPLETED') return { color: colors.ready };
+  if (status === 'CANCELLED' || status === 'NO_SHOW') return { color: colors.danger };
+  return { color: colors.goldInk };
+}
+
 const styles = StyleSheet.create({
   chips: {
     flexDirection: 'row',
@@ -128,47 +166,79 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   chip: {
-    borderColor: '#e4ddd2',
+    backgroundColor: colors.card,
     borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   chipActive: {
-    backgroundColor: '#1c1915',
-    borderColor: '#1c1915',
+    backgroundColor: colors.blue,
   },
   chipLabel: {
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 14,
     fontWeight: '600',
   },
   chipLabelActive: {
-    color: '#fff',
+    color: colors.white,
+  },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    marginBottom: 12,
+    padding: 16,
+  },
+  cardHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  cardCopy: {
+    flex: 1,
+  },
+  cardTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  status: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  cardLine: {
+    color: colors.muted,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  action: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
   },
   empty: {
-    color: '#3f3832',
+    color: colors.muted,
     fontSize: 16,
   },
   spinner: {
     marginVertical: 24,
   },
   error: {
-    color: '#7f1d1d',
+    color: colors.danger,
     marginBottom: 12,
   },
-  cancel: {
-    alignSelf: 'flex-start',
-    marginBottom: 16,
-    marginTop: -4,
-  },
   cancelLabel: {
-    color: '#7f1d1d',
+    color: colors.danger,
     fontSize: 15,
     fontWeight: '600',
   },
   reviewLabel: {
-    color: '#1c1915',
+    color: colors.blue,
     fontSize: 15,
     fontWeight: '600',
   },

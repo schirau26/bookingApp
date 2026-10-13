@@ -19,7 +19,6 @@ export const registerSchema = z.object({
   email: z.email().transform((email) => email.toLowerCase()),
   password: passwordSchema,
   phone: z.preprocess((value) => (value === '' ? undefined : value), phoneSchema.optional()),
-  role: z.enum(['CUSTOMER', 'BUSINESS_OWNER']),
 });
 
 export const loginSchema = z.object({

@@ -69,7 +69,7 @@ export async function register(input: RegisterInput): Promise<Session> {
         email: input.email,
         passwordHash: await hashPassword(input.password),
         phone: input.phone ?? null,
-        role: input.role,
+        role: 'CUSTOMER',
       },
     });
     return issueSession(toAuthUser(user));

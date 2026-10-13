@@ -16,7 +16,6 @@ type RegisterInput = {
   email: string;
   password: string;
   phone?: string;
-  role: 'CUSTOMER' | 'BUSINESS_OWNER';
 };
 
 type AuthContextValue = {

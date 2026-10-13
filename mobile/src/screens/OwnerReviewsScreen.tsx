@@ -1,14 +1,16 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
-import { ListCard, PrimaryButton, ScrollScreen } from '../components/Form';
+import { PrimaryButton, ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
-import type { OwnerStackParamList } from '../navigation/types';
+import type { OwnerRootParamList } from '../navigation/types';
 import { ApiError } from '../services/api';
-import { formatStars, type PublicReview } from '../types/review';
+import { colors } from '../theme/colors';
+import type { PublicReview } from '../types/review';
 
-type Props = NativeStackScreenProps<OwnerStackParamList, 'OwnerReviews'>;
+type Props = NativeStackScreenProps<OwnerRootParamList, 'OwnerReviews'>;
 
 export function OwnerReviewsScreen({ route }: Props) {
   const { request } = useAuth();
@@ -72,18 +74,29 @@ export function OwnerReviewsScreen({ route }: Props) {
 
   return (
     <ScrollScreen>
-      {loading ? <ActivityIndicator style={styles.spinner} /> : null}
+      {loading ? <ActivityIndicator color={colors.ink} style={styles.spinner} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {!loading && !error && reviews.length === 0 ? <Text style={styles.empty}>No reviews yet.</Text> : null}
       {reviews.map((review) => (
-        <View key={review.id} style={styles.block}>
-          <ListCard lines={[formatStars(review.rating), review.body]} title={review.authorName} />
+        <View key={review.id} style={styles.card}>
+          <Text style={styles.author}>{review.authorName}</Text>
+          <View style={styles.stars}>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <Ionicons
+                color={colors.lime}
+                key={value}
+                name={value <= review.rating ? 'star' : 'star-outline'}
+                size={16}
+              />
+            ))}
+          </View>
+          <Text style={styles.body}>{review.body}</Text>
           <TextInput
             accessibilityLabel={`Reply to ${review.authorName}`}
             multiline
             onChangeText={(value) => setReplies((current) => ({ ...current, [review.id]: value }))}
             placeholder="Reply"
-            placeholderTextColor="#8a8175"
+            placeholderTextColor={colors.muted}
             style={styles.input}
             value={replies[review.id] ?? ''}
           />
@@ -96,11 +109,12 @@ export function OwnerReviewsScreen({ route }: Props) {
                 accessibilityLabel={`Report reason for ${review.authorName}`}
                 onChangeText={(value) => setReasons((current) => ({ ...current, [review.id]: value }))}
                 placeholder="Reason for a report"
-                placeholderTextColor="#8a8175"
+                placeholderTextColor={colors.muted}
                 style={styles.input}
                 value={reasons[review.id] ?? ''}
               />
-              <PrimaryButton label="Report review" onPress={() => void report(review.id)} />
+              <PrimaryButton label="Report review" onPress={() => void report(review.id)} tone="blue" />
+              <Text style={styles.note}>A report does not hide the review.</Text>
             </>
           )}
         </View>
@@ -110,15 +124,34 @@ export function OwnerReviewsScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  block: {
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    marginBottom: 16,
+    padding: 14,
+  },
+  author: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  stars: {
+    flexDirection: 'row',
+    gap: 2,
+    marginVertical: 6,
+  },
+  body: {
+    color: colors.inkSoft,
+    fontSize: 15,
+    lineHeight: 22,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
-    borderColor: '#e4ddd2',
-    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: 16,
     borderWidth: 1,
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 16,
     marginBottom: 8,
     minHeight: 48,
@@ -126,18 +159,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   empty: {
-    color: '#3f3832',
+    color: colors.muted,
     fontSize: 16,
   },
   spinner: {
     marginVertical: 24,
   },
   error: {
-    color: '#7f1d1d',
+    color: colors.danger,
     marginBottom: 12,
   },
   note: {
-    color: '#6b6256',
+    color: colors.muted,
     marginBottom: 16,
     marginTop: 8,
   },

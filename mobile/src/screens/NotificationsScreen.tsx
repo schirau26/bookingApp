@@ -1,14 +1,10 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ListCard, ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
-import type { CustomerStackParamList, OwnerStackParamList } from '../navigation/types';
 import { ApiError } from '../services/api';
-
-type CustomerProps = NativeStackScreenProps<CustomerStackParamList, 'Notifications'>;
-type OwnerProps = NativeStackScreenProps<OwnerStackParamList, 'Notifications'>;
+import { colors } from '../theme/colors';
 
 type InboxNotification = {
   id: string;
@@ -19,7 +15,13 @@ type InboxNotification = {
   review: { id: string; businessId: string } | null;
 };
 
-export function NotificationsScreen({ navigation }: CustomerProps | OwnerProps) {
+type LooseNav = {
+  navigate: (screen: string, params?: object) => void;
+  getParent: () => LooseNav | undefined;
+};
+
+export function NotificationsScreen() {
+  const navigation = useNavigation() as unknown as LooseNav;
   const { request, user } = useAuth();
   const [notifications, setNotifications] = useState<InboxNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -55,15 +57,20 @@ export function NotificationsScreen({ navigation }: CustomerProps | OwnerProps) 
     if (!item.isRead) {
       void request(`/api/notifications/${item.id}`, { method: 'PATCH', body: { isRead: true } });
     }
+    const tabs = navigation.getParent();
+    const root = tabs?.getParent() ?? navigation;
     if (user?.role === 'BUSINESS_OWNER') {
-      const ownerNavigation = navigation as OwnerProps['navigation'];
-      if (item.booking) ownerNavigation.navigate('OwnerBookings', { businessId: item.booking.businessId });
-      else if (item.review) ownerNavigation.navigate('OwnerReviews', { businessId: item.review.businessId });
+      if (item.booking) {
+        tabs?.navigate('HomeTab', { screen: 'OwnerQueue' });
+      } else if (item.review) {
+        root.navigate('OwnerReviews', { businessId: item.review.businessId });
+      }
       return;
     }
-    const customerNavigation = navigation as CustomerProps['navigation'];
-    if (item.booking) customerNavigation.navigate('MyBookings');
-    else if (item.review) customerNavigation.navigate('BusinessDetail', { businessId: item.review.businessId });
+    if (item.booking) tabs?.navigate('BookingsTab', { screen: 'MyBookings' });
+    else if (item.review) {
+      tabs?.navigate('HomeTab', { screen: 'WashHome' });
+    }
   }
 
   function toggleRead(item: InboxNotification) {
@@ -76,7 +83,7 @@ export function NotificationsScreen({ navigation }: CustomerProps | OwnerProps) 
 
   return (
     <ScrollScreen>
-      {loading ? <ActivityIndicator style={styles.spinner} /> : null}
+      {loading ? <ActivityIndicator color={colors.ink} style={styles.spinner} /> : null}
       {!loading && !error ? (
         <Text style={styles.summary}>{unreadCount === 0 ? 'You are caught up.' : `${unreadCount} unread`}</Text>
       ) : null}
@@ -86,7 +93,13 @@ export function NotificationsScreen({ navigation }: CustomerProps | OwnerProps) 
       ) : null}
       {notifications.map((item) => (
         <View key={item.id}>
-          <ListCard lines={[item.message]} onPress={() => open(item)} title={item.title} unread={!item.isRead} />
+          <ListCard
+            icon="notifications-outline"
+            lines={[item.message]}
+            onPress={() => open(item)}
+            title={item.title}
+            unread={!item.isRead}
+          />
           <Pressable accessibilityRole="button" onPress={() => toggleRead(item)} style={styles.toggle}>
             <Text style={styles.toggleLabel}>{item.isRead ? 'Mark unread' : 'Mark read'}</Text>
           </Pressable>
@@ -98,7 +111,7 @@ export function NotificationsScreen({ navigation }: CustomerProps | OwnerProps) 
 
 const styles = StyleSheet.create({
   summary: {
-    color: '#3f3832',
+    color: colors.inkSoft,
     fontSize: 16,
     marginBottom: 12,
   },
@@ -106,11 +119,11 @@ const styles = StyleSheet.create({
     marginVertical: 24,
   },
   empty: {
-    color: '#3f3832',
+    color: colors.muted,
     fontSize: 16,
   },
   error: {
-    color: '#7f1d1d',
+    color: colors.danger,
     marginBottom: 12,
   },
   toggle: {
@@ -118,7 +131,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   toggleLabel: {
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 15,
     fontWeight: '600',
   },

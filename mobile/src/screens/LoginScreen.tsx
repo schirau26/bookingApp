@@ -1,9 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Field, PrimaryButton, Screen, SecondaryButton } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/api';
+import { colors } from '../theme/colors';
 import { validateLogin } from '../utils/validation';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -60,19 +62,48 @@ export function LoginScreen({ navigation }: Props) {
         }}
       />
       <SecondaryButton label="Create an account" onPress={() => navigation.navigate('Register')} />
+      <View style={styles.logo}>
+        <Ionicons color={colors.ink} name="car-sport-outline" size={44} />
+        <View style={styles.swoosh} />
+        <Text style={styles.wordmark}>Urban Glow</Text>
+        <Text style={styles.wordmarkSub}>Car Wash</Text>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   title: {
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '700',
     marginBottom: 24,
   },
   error: {
-    color: '#7f1d1d',
+    color: colors.danger,
     marginBottom: 8,
+  },
+  logo: {
+    alignItems: 'center',
+    marginTop: 36,
+  },
+  swoosh: {
+    backgroundColor: colors.lime,
+    borderRadius: 4,
+    height: 4,
+    marginTop: -4,
+    width: 72,
+  },
+  wordmark: {
+    color: colors.ink,
+    fontSize: 28,
+    fontWeight: '800',
+    marginTop: 10,
+  },
+  wordmarkSub: {
+    color: colors.goldInk,
+    fontSize: 22,
+    fontWeight: '700',
+    marginTop: 2,
   },
 });

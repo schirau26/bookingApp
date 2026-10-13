@@ -1,22 +1,27 @@
+import { Ionicons } from '@expo/vector-icons';
+import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ComponentProps } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { ListCard, PrimaryButton, ScrollScreen, SecondaryButton } from '../components/Form';
+import { Field, ListCard, PrimaryButton, ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
-import type { OwnerStackParamList } from '../navigation/types';
+import type { OwnerManageStackParamList, OwnerRootParamList } from '../navigation/types';
 import { ApiError, mediaUrl } from '../services/api';
+import { colors } from '../theme/colors';
 import { pickImage } from '../services/images';
 import {
   WEEKDAYS,
-  approvalLabels,
-  formatDuration,
   formatMoney,
   type OwnerBusiness,
   type Weekday,
 } from '../types/business';
 
-type Props = NativeStackScreenProps<OwnerStackParamList, 'ManageBusiness'>;
+type Props = CompositeScreenProps<
+  NativeStackScreenProps<OwnerManageStackParamList, 'ManageBusiness'>,
+  NativeStackScreenProps<OwnerRootParamList>
+>;
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
 type HourDraft = {
   dayOfWeek: Weekday;
@@ -46,21 +51,27 @@ function hourDrafts(business: OwnerBusiness | null): HourDraft[] {
   });
 }
 
-export function ManageBusinessScreen({ navigation, route }: Props) {
+export function ManageBusinessScreen({ navigation }: Props) {
   const { request, upload } = useAuth();
-  const businessId = route.params.businessId;
   const [business, setBusiness] = useState<OwnerBusiness | null>(null);
   const [hours, setHours] = useState<HourDraft[]>(() => hourDrafts(null));
+  const [bayCount, setBayCount] = useState('1');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
     let cancelled = false;
-    request<{ business: OwnerBusiness }>(`/api/businesses/mine/${businessId}`)
+    request<{ businesses: OwnerBusiness[] }>('/api/businesses/mine')
       .then((body) => {
         if (cancelled) return;
-        setBusiness(body.business);
-        setHours(hourDrafts(body.business));
+        const wash = body.businesses[0];
+        if (!wash) {
+          setError('Wash not found');
+          return;
+        }
+        setBusiness(wash);
+        setBayCount(String(wash.bayCount));
+        setHours(hourDrafts(wash));
       })
       .catch((caught: unknown) => {
         if (!cancelled) {
@@ -70,7 +81,7 @@ export function ManageBusinessScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [businessId, request]);
+  }, [request]);
 
   useFocusEffect(load);
 
@@ -96,10 +107,11 @@ export function ManageBusinessScreen({ navigation, route }: Props) {
         return;
       }
     }
+    if (!business) return;
     setBusy(true);
     setError(null);
     try {
-      await request(`/api/businesses/${businessId}/hours`, {
+      await request(`/api/businesses/${business.id}/hours`, {
         method: 'PUT',
         body: {
           hours: hours.map((day) => ({
@@ -113,6 +125,25 @@ export function ManageBusinessScreen({ navigation, route }: Props) {
       load();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Unable to save hours.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveBays() {
+    if (!business) return;
+    const count = Number(bayCount);
+    if (!Number.isInteger(count) || count < 1 || count > 20) {
+      setError('Bay count must be a whole number from 1 to 20.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await request(`/api/businesses/${business.id}`, { method: 'PATCH', body: { bayCount: count } });
+      load();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Unable to save the bay count.');
     } finally {
       setBusy(false);
     }
@@ -145,65 +176,87 @@ export function ManageBusinessScreen({ navigation, route }: Props) {
 
   return (
     <ScrollScreen>
-      <Text style={styles.status}>{approvalLabels[business.approvalStatus]}</Text>
-      {business.rejectionReason ? <Text style={styles.error}>{business.rejectionReason}</Text> : null}
       <Text style={styles.title}>{business.name}</Text>
-      <SecondaryButton
-        label="Edit details"
-        onPress={() => navigation.navigate('BusinessForm', { businessId })}
-      />
-      <SecondaryButton
-        label="View bookings"
-        onPress={() => navigation.navigate('OwnerBookings', { businessId })}
-      />
-      <SecondaryButton
-        label="View reviews"
-        onPress={() => navigation.navigate('OwnerReviews', { businessId })}
-      />
+      <View style={styles.actions}>
+        <ActionTile
+          icon="star-outline"
+          label="Reviews"
+          onPress={() => navigation.navigate('OwnerReviews', { businessId: business.id })}
+        />
+      </View>
+      <Text style={styles.section}>Bays</Text>
+      <Field keyboardType="number-pad" label="Cars washed at once" onChangeText={setBayCount} value={bayCount} />
+      <PrimaryButton disabled={busy} label="Save bays" onPress={() => void saveBays()} />
       <Text style={styles.section}>Logo</Text>
-      {logo ? <Image source={{ uri: logo }} style={styles.logo} /> : null}
-      <PrimaryButton
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={logo ? 'Change logo' : 'Upload logo'}
         disabled={busy}
-        label="Upload logo"
-        onPress={() => void uploadImage(`/api/businesses/${businessId}/logo`)}
-      />
+        onPress={() => void uploadImage(`/api/businesses/${business.id}/logo`)}
+        style={styles.logoCard}
+      >
+        {logo ? (
+          <Image source={{ uri: logo }} style={styles.logoImage} />
+        ) : (
+          <View style={styles.logoEmpty}>
+            <Ionicons color={colors.lime} name="image-outline" size={28} />
+            <Text style={styles.logoEmptyText}>Add a logo</Text>
+          </View>
+        )}
+        <View style={styles.logoBadge}>
+          <Ionicons color={colors.ink} name="camera" size={14} />
+          <Text style={styles.logoBadgeText}>{busy ? 'Please wait' : logo ? 'Change' : 'Upload'}</Text>
+        </View>
+      </Pressable>
       <Text style={styles.section}>Photos</Text>
       <View style={styles.photos}>
         {business.photos.map((photo) => (
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Delete this photo"
             key={photo.id}
             onPress={() =>
               confirmDelete('Delete this photo?', async () => {
-                await request(`/api/businesses/${businessId}/photos/${photo.id}`, { method: 'DELETE' });
+                await request(`/api/businesses/${business.id}/photos/${photo.id}`, { method: 'DELETE' });
                 load();
               })
             }
+            style={styles.photoWrap}
           >
             <Image source={{ uri: mediaUrl(photo.url) ?? '' }} style={styles.photo} />
+            <View style={styles.photoRemove}>
+              <Ionicons color={colors.white} name="close" size={14} />
+            </View>
           </Pressable>
         ))}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add photo"
+          disabled={busy}
+          onPress={() => void uploadImage(`/api/businesses/${business.id}/photos`)}
+          style={styles.addPhoto}
+        >
+          <Ionicons color={colors.ink} name="add" size={28} />
+          <Text style={styles.addPhotoText}>Add</Text>
+        </Pressable>
       </View>
-      <PrimaryButton
-        disabled={busy}
-        label="Add photo"
-        onPress={() => void uploadImage(`/api/businesses/${businessId}/photos`)}
-      />
-      <Text style={styles.section}>Services</Text>
-      {business.services.map((service) => (
+      <Text style={styles.hint}>Tap a photo to remove it.</Text>
+      <Text style={styles.section}>Packages</Text>
+      {business.packages.map((service) => (
         <ListCard
+          icon={service.icon as IconName}
           key={service.id}
           lines={[
-            `${formatMoney(service.price)} · ${formatDuration(service.durationMinutes)}`,
+            service.startingPrice ? `From ${formatMoney(service.startingPrice)}` : 'Set prices',
             service.isActive ? 'Active' : 'Inactive',
           ]}
-          onPress={() => navigation.navigate('ServiceForm', { businessId, serviceId: service.id })}
+          onPress={() => navigation.navigate('ServiceForm', { businessId: business.id, serviceId: service.id })}
           title={service.name}
         />
       ))}
       <PrimaryButton
-        label="Add service"
-        onPress={() => navigation.navigate('ServiceForm', { businessId })}
+        label="Add package"
+        onPress={() => navigation.navigate('ServiceForm', { businessId: business.id })}
       />
       <Text style={styles.section}>Hours</Text>
       {hours.map((day, index) => {
@@ -215,6 +268,7 @@ export function ManageBusinessScreen({ navigation, route }: Props) {
               <Text style={styles.closedLabel}>{day.isClosed ? 'Closed' : 'Open'}</Text>
               <Switch
                 accessibilityLabel={`${label} open`}
+                trackColor={{ false: colors.line, true: colors.lime }}
                 onValueChange={(open) =>
                   setHours((current) =>
                     current.map((item, itemIndex) =>
@@ -262,43 +316,151 @@ export function ManageBusinessScreen({ navigation, route }: Props) {
   );
 }
 
+function ActionTile({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.tile}>
+      <View style={styles.tileIcon}>
+        <Ionicons color={colors.ink} name={icon} size={20} />
+      </View>
+      <Text style={styles.tileLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  tile: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    flex: 1,
+    gap: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 16,
+  },
+  tileIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.lime,
+    borderRadius: 16,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  tileLabel: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  logoCard: {
+    backgroundColor: colors.ink,
+    borderRadius: 24,
+    height: 180,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    height: '100%',
+    width: '100%',
+  },
+  logoEmpty: {
+    alignItems: 'center',
+    gap: 8,
+    height: '100%',
+    justifyContent: 'center',
+  },
+  logoEmptyText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  logoBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.lime,
+    borderRadius: 999,
+    bottom: 12,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    position: 'absolute',
+    right: 12,
+  },
+  logoBadgeText: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  photoWrap: {
+    borderRadius: 18,
+    height: 108,
+    overflow: 'hidden',
+    width: 108,
+  },
+  photoRemove: {
+    alignItems: 'center',
+    backgroundColor: colors.ink,
+    borderRadius: 12,
+    height: 24,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 6,
+    top: 6,
+    width: 24,
+  },
+  addPhoto: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: 18,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+    height: 108,
+    justifyContent: 'center',
+    width: 108,
+  },
+  addPhotoText: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  hint: {
+    color: colors.muted,
+    fontSize: 13,
+    marginTop: 8,
+  },
   status: {
-    color: '#6b6256',
+    color: colors.muted,
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
     textTransform: 'uppercase',
   },
   title: {
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
   },
   section: {
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 8,
     marginTop: 24,
   },
-  logo: {
-    borderRadius: 16,
-    height: 96,
-    marginBottom: 12,
-    width: 96,
-  },
   photos: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: 10,
   },
   photo: {
-    borderRadius: 12,
-    height: 88,
-    width: 88,
+    height: '100%',
+    width: '100%',
   },
   day: {
     marginBottom: 12,
@@ -309,13 +471,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayLabel: {
-    color: '#1c1915',
+    color: colors.ink,
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
   },
   closedLabel: {
-    color: '#6b6256',
+    color: colors.muted,
   },
   times: {
     flexDirection: 'row',
@@ -323,17 +485,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   time: {
-    backgroundColor: '#fff',
-    borderColor: '#e4ddd2',
-    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderColor: colors.line,
+    borderRadius: 16,
     borderWidth: 1,
+    color: colors.ink,
     flex: 1,
     fontSize: 16,
     minHeight: 44,
     paddingHorizontal: 12,
   },
   error: {
-    color: '#7f1d1d',
+    color: colors.danger,
     marginBottom: 8,
   },
 });

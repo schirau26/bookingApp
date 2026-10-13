@@ -1,26 +1,40 @@
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import type { ComponentProps } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import { AdminHomeScreen } from '../screens/AdminHomeScreen';
 import { BookScreen } from '../screens/BookScreen';
-import { BusinessDetailScreen } from '../screens/BusinessDetailScreen';
-import { BusinessFormScreen } from '../screens/BusinessFormScreen';
-import { DiscoverScreen } from '../screens/DiscoverScreen';
+import { InvoiceScreen } from '../screens/InvoiceScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { ManageBusinessScreen } from '../screens/ManageBusinessScreen';
 import { MyBookingsScreen } from '../screens/MyBookingsScreen';
-import { MyBusinessesScreen } from '../screens/MyBusinessesScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { OwnerBookingsScreen } from '../screens/OwnerBookingsScreen';
 import { OwnerReviewsScreen } from '../screens/OwnerReviewsScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
 import { ReviewFormScreen } from '../screens/ReviewFormScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { ServiceFormScreen } from '../screens/ServiceFormScreen';
+import { WashHomeScreen } from '../screens/WashHomeScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
-import type { AdminStackParamList, CustomerStackParamList, OwnerStackParamList } from './types';
+import { colors } from '../theme/colors';
+import type {
+  BookingsStackParamList,
+  CustomerRootParamList,
+  CustomerTabParamList,
+  HomeStackParamList,
+  InboxStackParamList,
+  OwnerHomeStackParamList,
+  OwnerManageStackParamList,
+  OwnerRootParamList,
+  OwnerTabParamList,
+  ProfileStackParamList,
+} from './types';
 
-export type { AdminStackParamList, CustomerStackParamList, OwnerStackParamList } from './types';
+export type { CustomerRootParamList, OwnerRootParamList } from './types';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -28,35 +42,211 @@ export type RootStackParamList = {
   Register: undefined;
 };
 
-const SignedOutStack = createNativeStackNavigator<RootStackParamList>();
-const CustomerStack = createNativeStackNavigator<CustomerStackParamList>();
-const OwnerStack = createNativeStackNavigator<OwnerStackParamList>();
-const AdminStack = createNativeStackNavigator<AdminStackParamList>();
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
-const screenOptions = {
+const SignedOutStack = createNativeStackNavigator<RootStackParamList>();
+const CustomerRoot = createNativeStackNavigator<CustomerRootParamList>();
+const OwnerRoot = createNativeStackNavigator<OwnerRootParamList>();
+const CustomerTabs = createBottomTabNavigator<CustomerTabParamList>();
+const OwnerTabs = createBottomTabNavigator<OwnerTabParamList>();
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const BookingsStack = createNativeStackNavigator<BookingsStackParamList>();
+const InboxStack = createNativeStackNavigator<InboxStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const OwnerHomeStack = createNativeStackNavigator<OwnerHomeStackParamList>();
+const OwnerManageStack = createNativeStackNavigator<OwnerManageStackParamList>();
+
+const stackScreenOptions = {
   headerShadowVisible: false,
-  headerRight: () => <HeaderActions />,
+  headerStyle: { backgroundColor: colors.canvas },
+  headerTintColor: colors.ink,
+  headerTitleStyle: { fontWeight: '700' as const },
+  contentStyle: { backgroundColor: colors.canvas },
 };
 
-function HeaderActions() {
-  const { logout, user } = useAuth();
-  const navigation = useNavigation();
-  const showInbox = user?.role === 'CUSTOMER' || user?.role === 'BUSINESS_OWNER';
+function CustomerTabIcon({
+  name,
+  label,
+  focused,
+}: {
+  name: 'home' | 'calendar' | 'notifications' | 'person';
+  label: string;
+  focused: boolean;
+}) {
+  const icon = (focused ? name : `${name}-outline`) as IconName;
   return (
-    <View style={styles.headerActions}>
-      {showInbox ? (
-        <Pressable
-          accessibilityLabel="Inbox"
-          accessibilityRole="button"
-          onPress={() => navigation.navigate('Notifications' as never)}
-        >
-          <Text style={styles.logout}>Inbox</Text>
-        </Pressable>
+    <View style={[styles.customerTab, focused ? styles.customerTabActive : null]}>
+      <Ionicons color={focused ? colors.white : colors.muted} name={icon} size={18} />
+      {focused ? (
+        <Text numberOfLines={1} style={styles.customerTabLabel}>
+          {label}
+        </Text>
       ) : null}
-      <Pressable accessibilityRole="button" onPress={() => void logout()}>
-        <Text style={styles.logout}>Log out</Text>
-      </Pressable>
     </View>
+  );
+}
+
+function TabIcon({
+  name,
+  focused,
+}: {
+  name: 'home' | 'storefront' | 'notifications' | 'person';
+  focused: boolean;
+}) {
+  const icon = (focused ? name : `${name}-outline`) as IconName;
+  return (
+    <View style={[styles.tabIcon, focused ? styles.tabIconActive : null]}>
+      <Ionicons color={focused ? colors.ink : colors.muted} name={icon} size={22} />
+    </View>
+  );
+}
+
+const tabScreenOptions = {
+  headerShown: false,
+  tabBarShowLabel: false,
+  tabBarStyle: {
+    backgroundColor: colors.card,
+    borderTopColor: colors.line,
+    paddingTop: 8,
+  },
+};
+
+function CustomerHomeStack() {
+  return (
+    <HomeStack.Navigator screenOptions={stackScreenOptions}>
+      <HomeStack.Screen component={WashHomeScreen} name="WashHome" options={{ headerShown: false }} />
+    </HomeStack.Navigator>
+  );
+}
+
+function CustomerBookingsStack() {
+  return (
+    <BookingsStack.Navigator screenOptions={stackScreenOptions}>
+      <BookingsStack.Screen component={MyBookingsScreen} name="MyBookings" options={{ title: 'My bookings' }} />
+    </BookingsStack.Navigator>
+  );
+}
+
+function InboxStackScreen() {
+  return (
+    <InboxStack.Navigator screenOptions={stackScreenOptions}>
+      <InboxStack.Screen component={NotificationsScreen} name="Notifications" options={{ title: 'Inbox' }} />
+    </InboxStack.Navigator>
+  );
+}
+
+function ProfileStackScreen() {
+  return (
+    <ProfileStack.Navigator screenOptions={stackScreenOptions}>
+      <ProfileStack.Screen component={ProfileScreen} name="Profile" options={{ title: 'Profile' }} />
+    </ProfileStack.Navigator>
+  );
+}
+
+function CustomerTabNavigator() {
+  const insets = useSafeAreaInsets();
+  return (
+    <CustomerTabs.Navigator
+      screenOptions={{
+        ...tabScreenOptions,
+        tabBarIconStyle: styles.customerTabSlot,
+        tabBarStyle: {
+          ...tabScreenOptions.tabBarStyle,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom,
+        },
+      }}
+    >
+      <CustomerTabs.Screen
+        component={CustomerHomeStack}
+        name="HomeTab"
+        options={{
+          tabBarAccessibilityLabel: 'Home',
+          tabBarIcon: ({ focused }) => <CustomerTabIcon focused={focused} label="Home" name="home" />,
+        }}
+      />
+      <CustomerTabs.Screen
+        component={CustomerBookingsStack}
+        name="BookingsTab"
+        options={{
+          tabBarAccessibilityLabel: 'Bookings',
+          tabBarIcon: ({ focused }) => <CustomerTabIcon focused={focused} label="Bookings" name="calendar" />,
+        }}
+      />
+      <CustomerTabs.Screen
+        component={InboxStackScreen}
+        name="InboxTab"
+        options={{
+          tabBarAccessibilityLabel: 'Inbox',
+          tabBarIcon: ({ focused }) => (
+            <CustomerTabIcon focused={focused} label="Inbox" name="notifications" />
+          ),
+        }}
+      />
+      <CustomerTabs.Screen
+        component={ProfileStackScreen}
+        name="ProfileTab"
+        options={{
+          tabBarAccessibilityLabel: 'Profile',
+          tabBarIcon: ({ focused }) => <CustomerTabIcon focused={focused} label="Profile" name="person" />,
+        }}
+      />
+    </CustomerTabs.Navigator>
+  );
+}
+
+function OwnerHomeStackScreen() {
+  return (
+    <OwnerHomeStack.Navigator screenOptions={stackScreenOptions}>
+      <OwnerHomeStack.Screen component={OwnerBookingsScreen} name="OwnerQueue" options={{ title: 'Today' }} />
+    </OwnerHomeStack.Navigator>
+  );
+}
+
+function OwnerManageStackScreen() {
+  return (
+    <OwnerManageStack.Navigator screenOptions={stackScreenOptions}>
+      <OwnerManageStack.Screen component={ManageBusinessScreen} name="ManageBusiness" options={{ title: 'Wash' }} />
+    </OwnerManageStack.Navigator>
+  );
+}
+
+function OwnerTabNavigator() {
+  return (
+    <OwnerTabs.Navigator screenOptions={tabScreenOptions}>
+      <OwnerTabs.Screen
+        component={OwnerHomeStackScreen}
+        name="HomeTab"
+        options={{
+          tabBarAccessibilityLabel: 'Home',
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="home" />,
+        }}
+      />
+      <OwnerTabs.Screen
+        component={OwnerManageStackScreen}
+        name="ManageTab"
+        options={{
+          tabBarAccessibilityLabel: 'Wash',
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="storefront" />,
+        }}
+      />
+      <OwnerTabs.Screen
+        component={InboxStackScreen}
+        name="InboxTab"
+        options={{
+          tabBarAccessibilityLabel: 'Inbox',
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="notifications" />,
+        }}
+      />
+      <OwnerTabs.Screen
+        component={ProfileStackScreen}
+        name="ProfileTab"
+        options={{
+          tabBarAccessibilityLabel: 'Profile',
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="person" />,
+        }}
+      />
+    </OwnerTabs.Navigator>
   );
 }
 
@@ -66,7 +256,7 @@ export function RootNavigator() {
   if (status === 'loading') {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator color={colors.ink} size="large" />
       </View>
     );
   }
@@ -74,50 +264,25 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       {status !== 'signedIn' || !user ? (
-        <SignedOutStack.Navigator>
-          <SignedOutStack.Screen
-            component={WelcomeScreen}
-            name="Welcome"
-            options={{ title: 'Welcome', headerShadowVisible: false }}
-          />
-          <SignedOutStack.Screen
-            component={LoginScreen}
-            name="Login"
-            options={{ title: 'Sign in', headerShadowVisible: false }}
-          />
-          <SignedOutStack.Screen
-            component={RegisterScreen}
-            name="Register"
-            options={{ title: 'Register', headerShadowVisible: false }}
-          />
+        <SignedOutStack.Navigator screenOptions={stackScreenOptions}>
+          <SignedOutStack.Screen component={WelcomeScreen} name="Welcome" options={{ headerShown: false }} />
+          <SignedOutStack.Screen component={LoginScreen} name="Login" options={{ title: 'Sign in' }} />
+          <SignedOutStack.Screen component={RegisterScreen} name="Register" options={{ title: 'Register' }} />
         </SignedOutStack.Navigator>
       ) : user.role === 'BUSINESS_OWNER' ? (
-        <OwnerStack.Navigator screenOptions={screenOptions}>
-          <OwnerStack.Screen component={MyBusinessesScreen} name="MyBusinesses" options={{ title: 'My businesses' }} />
-          <OwnerStack.Screen component={BusinessFormScreen} name="BusinessForm" options={{ title: 'Business' }} />
-          <OwnerStack.Screen component={ManageBusinessScreen} name="ManageBusiness" options={{ title: 'Manage' }} />
-          <OwnerStack.Screen component={ServiceFormScreen} name="ServiceForm" options={{ title: 'Service' }} />
-          <OwnerStack.Screen component={OwnerBookingsScreen} name="OwnerBookings" options={{ title: 'Bookings' }} />
-          <OwnerStack.Screen component={OwnerReviewsScreen} name="OwnerReviews" options={{ title: 'Reviews' }} />
-          <OwnerStack.Screen component={NotificationsScreen} name="Notifications" options={{ title: 'Inbox' }} />
-        </OwnerStack.Navigator>
-      ) : user.role === 'ADMIN' ? (
-        <AdminStack.Navigator screenOptions={screenOptions}>
-          <AdminStack.Screen component={AdminHomeScreen} name="AdminHome" options={{ title: 'Admin' }} />
-        </AdminStack.Navigator>
+        <OwnerRoot.Navigator screenOptions={stackScreenOptions}>
+          <OwnerRoot.Screen component={OwnerTabNavigator} name="OwnerTabs" options={{ headerShown: false }} />
+          <OwnerRoot.Screen component={ServiceFormScreen} name="ServiceForm" options={{ title: 'Package' }} />
+          <OwnerRoot.Screen component={OwnerReviewsScreen} name="OwnerReviews" options={{ title: 'Reviews' }} />
+          <OwnerRoot.Screen component={InvoiceScreen} name="Invoice" options={{ title: 'Invoice' }} />
+        </OwnerRoot.Navigator>
       ) : (
-        <CustomerStack.Navigator screenOptions={screenOptions}>
-          <CustomerStack.Screen component={DiscoverScreen} name="Discover" options={{ title: 'Discover' }} />
-          <CustomerStack.Screen
-            component={BusinessDetailScreen}
-            name="BusinessDetail"
-            options={{ title: 'Business' }}
-          />
-          <CustomerStack.Screen component={BookScreen} name="Book" options={{ title: 'Book' }} />
-          <CustomerStack.Screen component={MyBookingsScreen} name="MyBookings" options={{ title: 'My bookings' }} />
-          <CustomerStack.Screen component={ReviewFormScreen} name="ReviewForm" options={{ title: 'Review' }} />
-          <CustomerStack.Screen component={NotificationsScreen} name="Notifications" options={{ title: 'Inbox' }} />
-        </CustomerStack.Navigator>
+        <CustomerRoot.Navigator screenOptions={stackScreenOptions}>
+          <CustomerRoot.Screen component={CustomerTabNavigator} name="CustomerTabs" options={{ headerShown: false }} />
+          <CustomerRoot.Screen component={BookScreen} name="Book" options={{ title: 'Book a wash' }} />
+          <CustomerRoot.Screen component={ReviewFormScreen} name="ReviewForm" options={{ title: 'Review' }} />
+          <CustomerRoot.Screen component={InvoiceScreen} name="Invoice" options={{ title: 'Invoice' }} />
+        </CustomerRoot.Navigator>
       )}
     </NavigationContainer>
   );
@@ -128,16 +293,36 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f6f4ef',
+    backgroundColor: colors.canvas,
   },
-  headerActions: {
+  tabIcon: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 16,
+    borderRadius: 18,
+    height: 36,
+    justifyContent: 'center',
+    width: 48,
   },
-  logout: {
-    color: '#1c1915',
-    fontSize: 16,
-    fontWeight: '600',
+  tabIconActive: {
+    backgroundColor: colors.lime,
+  },
+  customerTabSlot: {
+    height: 48,
+    width: 76,
+  },
+  customerTab: {
+    alignItems: 'center',
+    borderRadius: 16,
+    height: '100%',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  customerTabActive: {
+    backgroundColor: colors.blue,
+  },
+  customerTabLabel: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
   },
 });

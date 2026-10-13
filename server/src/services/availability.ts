@@ -80,10 +80,12 @@ export function buildSlots(input: {
   durationMinutes: number;
   now: Date;
   blocking: TimeRange[];
+  bayCount: number;
 }): TimeRange[] {
   const distance = calendarDaysBetween(windhoekDate(input.now), input.date);
   if (distance < 0 || distance > MAX_DAYS_AHEAD) return [];
   if (input.isClosed || !input.openTime || !input.closeTime || input.durationMinutes < 1) return [];
+  if (input.bayCount < 1) return [];
 
   const open = windhoekDateTime(input.date, input.openTime);
   const close = windhoekDateTime(input.date, input.closeTime);
@@ -93,7 +95,8 @@ export function buildSlots(input: {
   for (let start = open.getTime(); start + durationMs <= close.getTime(); start += durationMs) {
     const slot = { startsAt: new Date(start), endsAt: new Date(start + durationMs) };
     if (slot.startsAt.getTime() <= input.now.getTime()) continue;
-    if (input.blocking.some((booking) => rangesOverlap(booking, slot))) continue;
+    const occupied = input.blocking.filter((booking) => rangesOverlap(booking, slot)).length;
+    if (occupied >= input.bayCount) continue;
     slots.push(slot);
   }
 

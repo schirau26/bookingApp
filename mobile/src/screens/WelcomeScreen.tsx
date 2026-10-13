@@ -1,47 +1,70 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton, Screen, SecondaryButton } from '../components/Form';
+import { PopIn } from '../components/motion';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Welcome'>;
 
 export function WelcomeScreen({ navigation }: Props) {
   return (
-    <Screen>
-      <Text style={styles.eyebrow}>Booking platform</Text>
-      <Text style={styles.title}>Find a service and reserve a time.</Text>
-      <Text style={styles.body}>
-        Sign in as a customer or a business owner. Booking tools arrive in a later phase.
-      </Text>
+    <Screen tone="ink">
+      <PopIn>
+        <View style={styles.mark}>
+          <Ionicons color={colors.ink} name="car-outline" size={36} />
+        </View>
+      </PopIn>
+      <Text style={styles.eyebrow}>Urban Glow Car Wash</Text>
+      <Text style={styles.title}>Clean car. Great impression.</Text>
+      <Text style={styles.body}>We clean, you shine.</Text>
       <PrimaryButton label="Sign in" onPress={() => navigation.navigate('Login')} />
-      <SecondaryButton label="Create an account" onPress={() => navigation.navigate('Register')} />
-      <StatusBar style="dark" />
+      <SecondaryButton
+        label="Create an account"
+        onPress={() => navigation.navigate('Register')}
+        outline
+        tone="light"
+      />
+      <StatusBar style="light" />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  mark: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: colors.lime,
+    borderRadius: 22,
+    height: 84,
+    justifyContent: 'center',
+    marginBottom: 28,
+    width: 84,
+  },
   eyebrow: {
-    color: '#6b6256',
+    color: colors.lime,
     fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.4,
+    fontWeight: '700',
+    letterSpacing: 0.6,
     marginBottom: 12,
+    textAlign: 'center',
     textTransform: 'uppercase',
   },
   title: {
-    color: '#1c1915',
-    fontSize: 32,
+    color: colors.white,
+    fontSize: 40,
     fontWeight: '700',
-    lineHeight: 40,
+    lineHeight: 46,
     marginBottom: 16,
+    textAlign: 'center',
   },
   body: {
-    color: '#3f3832',
+    color: colors.onInk,
     fontSize: 17,
     lineHeight: 26,
-    marginBottom: 24,
-    maxWidth: 420,
+    marginBottom: 28,
+    textAlign: 'center',
   },
 });

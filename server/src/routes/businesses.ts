@@ -1,19 +1,14 @@
 import { Router, type RequestHandler } from 'express';
 import { Role } from '../generated/prisma/client.js';
-import { optionalAuth, requireAuth, requireRole } from '../middleware/requireAuth.js';
+import { requireAuth, requireRole } from '../middleware/requireAuth.js';
 import { imageUpload } from '../middleware/upload.js';
-import { listAvailability, listOwnerBookings } from '../services/bookingService.js';
-import { listBusinessReviews } from '../services/reviewService.js';
+import { listOwnerBookings } from '../services/bookingService.js';
 import {
   addPhoto,
-  createBusiness,
   createService,
   deleteService,
   getMyBusiness,
-  getPublicBusiness,
   listMyBusinesses,
-  listPublicBusinesses,
-  listPublicServices,
   removePhoto,
   replaceHours,
   replaceLogo,
@@ -21,10 +16,9 @@ import {
   updateBusiness,
   updateService,
 } from '../services/businessService.js';
-import { availabilityQuerySchema, ownerBookingsQuerySchema } from '../validators/booking.js';
+import { listBusinessReviews } from '../services/reviewService.js';
+import { ownerBookingsQuerySchema } from '../validators/booking.js';
 import {
-  businessQuerySchema,
-  createBusinessSchema,
   createServiceSchema,
   hoursSchema,
   updateBusinessSchema,
@@ -38,15 +32,6 @@ const owner: RequestHandler[] = [requireAuth, requireRole(Role.BUSINESS_OWNER)];
 function idParam(value: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
-
-businessRouter.get('/', async (req, res, next) => {
-  try {
-    const query = businessQuerySchema.parse(req.query);
-    res.json(await listPublicBusinesses(query));
-  } catch (error) {
-    next(error);
-  }
-});
 
 businessRouter.get('/mine', ...owner, async (req, res, next) => {
   try {
@@ -64,27 +49,6 @@ businessRouter.get('/mine/:id', ...owner, async (req, res, next) => {
   }
 });
 
-businessRouter.post('/', ...owner, async (req, res, next) => {
-  try {
-    const body = createBusinessSchema.parse(req.body);
-    const result = await createBusiness(req.authUser!.id, body);
-    res.status(201).json(result);
-  } catch (error) {
-    next(error);
-  }
-});
-
-businessRouter.get('/:id/services/:serviceId/availability', async (req, res, next) => {
-  try {
-    const query = availabilityQuerySchema.parse(req.query);
-    res.json(
-      await listAvailability(idParam(req.params.id), idParam(req.params.serviceId), query.date),
-    );
-  } catch (error) {
-    next(error);
-  }
-});
-
 businessRouter.get('/:id/bookings', ...owner, async (req, res, next) => {
   try {
     const query = ownerBookingsQuerySchema.parse(req.query);
@@ -94,17 +58,9 @@ businessRouter.get('/:id/bookings', ...owner, async (req, res, next) => {
   }
 });
 
-businessRouter.get('/:id/reviews', optionalAuth, async (req, res, next) => {
+businessRouter.get('/:id/reviews', requireAuth, async (req, res, next) => {
   try {
     res.json(await listBusinessReviews(idParam(req.params.id), req.authUser?.id));
-  } catch (error) {
-    next(error);
-  }
-});
-
-businessRouter.get('/:id/services', async (req, res, next) => {
-  try {
-    res.json(await listPublicServices(idParam(req.params.id)));
   } catch (error) {
     next(error);
   }
@@ -207,14 +163,6 @@ businessRouter.delete('/:id/photos/:photoId', ...owner, async (req, res, next) =
   try {
     await removePhoto(req.authUser!.id, idParam(req.params.id), idParam(req.params.photoId));
     res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
-});
-
-businessRouter.get('/:id', async (req, res, next) => {
-  try {
-    res.json(await getPublicBusiness(idParam(req.params.id)));
   } catch (error) {
     next(error);
   }

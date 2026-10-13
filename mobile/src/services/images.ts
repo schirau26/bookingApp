@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 
 export async function pickImage() {
@@ -9,15 +10,12 @@ export async function pickImage() {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     quality: 0.8,
+    preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
   });
   if (result.canceled || !result.assets[0]) return null;
 
   const asset = result.assets[0];
   const form = new FormData();
-  form.append('image', {
-    uri: asset.uri,
-    name: asset.fileName ?? 'photo.jpg',
-    type: asset.mimeType ?? 'image/jpeg',
-  } as unknown as Blob);
+  form.append('image', new File(asset.uri));
   return form;
 }

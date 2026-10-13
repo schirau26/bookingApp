@@ -1,27 +1,48 @@
+import type { ComponentProps } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Field, PrimaryButton, ScrollScreen } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
-import type { CustomerStackParamList } from '../navigation/types';
+import type { CustomerRootParamList } from '../navigation/types';
 import { ApiError } from '../services/api';
-import type { BookingRecord } from '../types/booking';
-import { formatDuration, formatMoney, type PublicService } from '../types/business';
+import { colors } from '../theme/colors';
+import type { BookingRecord, VehicleSize } from '../types/booking';
+import {
+  VEHICLE_SIZE_OPTIONS,
+  formatDuration,
+  formatMoney,
+  priceFor,
+  type Wash,
+  type WashPackage,
+} from '../types/business';
 import { addDays, formatDateLabel, formatTime, windhoekDate } from '../utils/schedule';
 
-type Props = NativeStackScreenProps<CustomerStackParamList, 'Book'>;
-
+type Props = NativeStackScreenProps<CustomerRootParamList, 'Book'>;
 type Slot = { startsAt: string; endsAt: string };
+type IconName = ComponentProps<typeof Ionicons>['name'];
+
+function dateLabel(value: string, today: string) {
+  if (value === today) return 'Today';
+  if (value === addDays(today, 1)) return 'Tomorrow';
+  return formatDateLabel(value);
+}
 
 export function BookScreen({ navigation, route }: Props) {
   const { request, user } = useAuth();
-  const { businessId, serviceId } = route.params;
   const dates = useMemo(() => {
     const today = windhoekDate();
     return Array.from({ length: 14 }, (_, index) => addDays(today, index));
   }, []);
   const [date, setDate] = useState(dates[0]);
-  const [service, setService] = useState<PublicService | null>(null);
+  const [packages, setPackages] = useState<WashPackage[]>([]);
+  const [packagesReady, setPackagesReady] = useState(false);
+  const [packageId, setPackageId] = useState<string | null>(route.params.packageId ?? null);
+  const [vehicleSize, setVehicleSize] = useState<VehicleSize>('SEDAN');
+  const [registration, setRegistration] = useState('');
+  const [make, setMake] = useState('');
+  const [color, setColor] = useState('');
   const [slots, setSlots] = useState<Slot[]>([]);
   const [startsAt, setStartsAt] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState(user?.fullName ?? '');
@@ -34,23 +55,32 @@ export function BookScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    request<{ services: PublicService[] }>(`/api/businesses/${businessId}/services`)
+    request<{ wash: Wash }>('/api/wash')
       .then((body) => {
-        if (!cancelled) {
-          setService(body.services.find((item) => item.id === serviceId) ?? null);
-        }
+        if (cancelled) return;
+        setPackages(body.wash.packages);
+        setPackageId((current) => {
+          if (current && body.wash.packages.some((item) => item.id === current)) return current;
+          return body.wash.packages[0]?.id ?? null;
+        });
+        if (body.wash.packages.length === 0) setLoading(false);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      })
+      .finally(() => {
+        if (!cancelled) setPackagesReady(true);
+      });
     return () => {
       cancelled = true;
     };
-  }, [businessId, request, serviceId]);
+  }, [request]);
 
   useEffect(() => {
+    if (!packageId) return;
     let cancelled = false;
-    request<{ slots: Slot[] }>(
-      `/api/businesses/${businessId}/services/${serviceId}/availability?date=${date}`,
-    )
+    const params = new URLSearchParams({ packageId, vehicleSize, date });
+    request<{ slots: Slot[] }>(`/api/wash/availability?${params.toString()}`)
       .then((body) => {
         if (cancelled) return;
         setSlots(body.slots);
@@ -68,9 +98,17 @@ export function BookScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [businessId, date, request, serviceId]);
+  }, [date, packageId, request, vehicleSize]);
 
   async function submit() {
+    if (!packageId) {
+      setError('Choose a package.');
+      return;
+    }
+    if (!registration.trim()) {
+      setError('Enter the registration.');
+      return;
+    }
     if (!startsAt) {
       setError('Choose a time.');
       return;
@@ -81,8 +119,11 @@ export function BookScreen({ navigation, route }: Props) {
       await request<{ booking: BookingRecord }>('/api/bookings', {
         method: 'POST',
         body: {
-          businessId,
-          serviceId,
+          packageId,
+          vehicleSize,
+          registration: registration.trim(),
+          make: make.trim(),
+          color: color.trim(),
           startsAt,
           customerName,
           customerPhone,
@@ -90,7 +131,10 @@ export function BookScreen({ navigation, route }: Props) {
           note,
         },
       });
-      navigation.replace('MyBookings');
+      navigation.navigate('CustomerTabs', {
+        screen: 'BookingsTab',
+        params: { screen: 'MyBookings' },
+      });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Unable to create this booking.');
     } finally {
@@ -98,14 +142,89 @@ export function BookScreen({ navigation, route }: Props) {
     }
   }
 
+  const selected = packages.find((item) => item.id === packageId) ?? null;
+  const selectedPrice = selected ? priceFor(selected, vehicleSize) : null;
+
+  const sizeLabel = VEHICLE_SIZE_OPTIONS.find((option) => option.value === vehicleSize)?.label ?? vehicleSize;
+
   return (
     <ScrollScreen>
-      <Text style={styles.title}>{service?.name ?? 'Book a time'}</Text>
-      {service ? (
-        <Text style={styles.meta}>
-          {formatMoney(service.price)} · {formatDuration(service.durationMinutes)}
-        </Text>
+      {selected && selectedPrice ? (
+        <View style={styles.summary}>
+          <View style={styles.summaryIcon}>
+            <Ionicons color={colors.ink} name={selected.icon as IconName} size={22} />
+          </View>
+          <View style={styles.summaryCopy}>
+            <Text style={styles.summaryName}>{selected.name}</Text>
+            <Text style={styles.meta}>{formatDuration(selectedPrice.durationMinutes)}</Text>
+            <Text style={styles.summaryPrice}>
+              {formatMoney(selectedPrice.price)} for {sizeLabel}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <Text style={styles.title}>Book a wash</Text>
+      )}
+      <Text style={styles.label}>Package</Text>
+      {packagesReady && packages.length === 0 ? (
+        <Text style={styles.meta}>No packages are available to book.</Text>
       ) : null}
+      <View style={styles.chips}>
+        {packages.map((item) => {
+          const active = item.id === packageId;
+          return (
+            <Pressable
+              accessibilityRole="button"
+              key={item.id}
+              onPress={() => {
+                if (item.id === packageId) return;
+                setLoading(true);
+                setStartsAt(null);
+                setPackageId(item.id);
+              }}
+              style={[styles.chip, active ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipLabel, active ? styles.chipLabelActive : null]}>{item.name}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.label}>Vehicle size</Text>
+      <View style={styles.chips}>
+        {VEHICLE_SIZE_OPTIONS.map((option) => {
+          const active = option.value === vehicleSize;
+          return (
+            <Pressable
+              accessibilityRole="button"
+              key={option.value}
+              onPress={() => {
+                if (option.value === vehicleSize) return;
+                setLoading(true);
+                setStartsAt(null);
+                setVehicleSize(option.value);
+              }}
+              style={[styles.chip, active ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipLabel, active ? styles.chipLabelActive : null]}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Field
+        autoCapitalize="characters"
+        icon="card-outline"
+        label="Registration"
+        onChangeText={setRegistration}
+        value={registration}
+      />
+      <Field autoCapitalize="words" icon="car-outline" label="Make (optional)" onChangeText={setMake} value={make} />
+      <Field
+        autoCapitalize="words"
+        icon="color-palette-outline"
+        label="Colour (optional)"
+        onChangeText={setColor}
+        value={color}
+      />
       <Text style={styles.label}>Date</Text>
       <View style={styles.chips}>
         {dates.map((value) => {
@@ -122,14 +241,14 @@ export function BookScreen({ navigation, route }: Props) {
               style={[styles.chip, active ? styles.chipActive : null]}
             >
               <Text style={[styles.chipLabel, active ? styles.chipLabelActive : null]}>
-                {formatDateLabel(value)}
+                {dateLabel(value, dates[0])}
               </Text>
             </Pressable>
           );
         })}
       </View>
       <Text style={styles.label}>Time</Text>
-      {loading ? <ActivityIndicator /> : null}
+      {loading ? <ActivityIndicator color={colors.blue} /> : null}
       {!loading && slots.length === 0 ? <Text style={styles.meta}>No times are open on this day.</Text> : null}
       <View style={styles.chips}>
         {slots.map((slot) => {
@@ -139,25 +258,39 @@ export function BookScreen({ navigation, route }: Props) {
               accessibilityRole="button"
               key={slot.startsAt}
               onPress={() => setStartsAt(slot.startsAt)}
-              style={[styles.chip, active ? styles.chipActive : null]}
+              style={[styles.chip, active ? styles.chipTime : null]}
             >
-              <Text style={[styles.chipLabel, active ? styles.chipLabelActive : null]}>
+              <Text style={[styles.chipLabel, active ? styles.chipLabelTime : null]}>
                 {formatTime(slot.startsAt)}
               </Text>
             </Pressable>
           );
         })}
       </View>
-      <Field autoCapitalize="words" label="Name" onChangeText={setCustomerName} value={customerName} />
-      <Field keyboardType="phone-pad" label="Phone" onChangeText={setCustomerPhone} value={customerPhone} />
+      <Field autoCapitalize="words" icon="person-outline" label="Name" onChangeText={setCustomerName} value={customerName} />
+      <Field
+        icon="call-outline"
+        keyboardType="phone-pad"
+        label="Phone"
+        onChangeText={setCustomerPhone}
+        value={customerPhone}
+      />
       <Field
         autoComplete="email"
+        icon="mail-outline"
         keyboardType="email-address"
         label="Email"
         onChangeText={setCustomerEmail}
         value={customerEmail}
       />
-      <Field label="Note" multiline onChangeText={setNote} value={note} />
+      <Field
+        icon="pencil-outline"
+        label="Note"
+        multiline
+        onChangeText={setNote}
+        placeholder="Add any special requests or notes..."
+        value={note}
+      />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PrimaryButton
         disabled={submitting}
@@ -170,18 +303,49 @@ export function BookScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   title: {
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
   },
+  summary: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+    padding: 14,
+  },
+  summaryIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.blueSoft,
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  summaryCopy: {
+    flex: 1,
+  },
+  summaryName: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  summaryPrice: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 2,
+  },
   meta: {
-    color: '#3f3832',
-    fontSize: 16,
-    marginBottom: 12,
+    color: colors.inkSoft,
+    fontSize: 14,
+    marginTop: 2,
   },
   label: {
-    color: '#3f3832',
+    color: colors.inkSoft,
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
@@ -193,26 +357,30 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   chip: {
-    borderColor: '#e4ddd2',
+    backgroundColor: colors.card,
     borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   chipActive: {
-    backgroundColor: '#1c1915',
-    borderColor: '#1c1915',
+    backgroundColor: colors.blue,
   },
   chipLabel: {
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 14,
     fontWeight: '600',
   },
   chipLabelActive: {
-    color: '#fff',
+    color: colors.white,
+  },
+  chipTime: {
+    backgroundColor: colors.lime,
+  },
+  chipLabelTime: {
+    color: colors.ink,
   },
   error: {
-    color: '#7f1d1d',
+    color: colors.danger,
     marginBottom: 8,
   },
 });

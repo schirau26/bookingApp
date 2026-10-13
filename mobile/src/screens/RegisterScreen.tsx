@@ -1,14 +1,14 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Field, PrimaryButton, Screen, SecondaryButton } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/api';
+import { colors } from '../theme/colors';
 import { validateRegister } from '../utils/validation';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
-type AccountRole = 'CUSTOMER' | 'BUSINESS_OWNER';
 
 export function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
@@ -16,7 +16,6 @@ export function RegisterScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<AccountRole>('CUSTOMER');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,7 +34,6 @@ export function RegisterScreen({ navigation }: Props) {
         email: email.trim(),
         password,
         phone: phone.trim() || undefined,
-        role,
       });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Unable to create the account.');
@@ -68,19 +66,6 @@ export function RegisterScreen({ navigation }: Props) {
         value={password}
         onChangeText={setPassword}
       />
-      <Text style={styles.label}>Account type</Text>
-      <View style={styles.roles}>
-        <RoleOption
-          label="Customer"
-          selected={role === 'CUSTOMER'}
-          onPress={() => setRole('CUSTOMER')}
-        />
-        <RoleOption
-          label="Business owner"
-          selected={role === 'BUSINESS_OWNER'}
-          onPress={() => setRole('BUSINESS_OWNER')}
-        />
-      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PrimaryButton
         label={submitting ? 'Creating account…' : 'Create account'}
@@ -97,62 +82,15 @@ export function RegisterScreen({ navigation }: Props) {
   );
 }
 
-function RoleOption({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.role, selected ? styles.roleSelected : null]}
-    >
-      <Text style={styles.roleLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   title: {
-    color: '#1c1915',
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '700',
     marginBottom: 24,
   },
-  label: {
-    color: '#3f3832',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  roles: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  role: {
-    borderColor: '#e4ddd2',
-    borderRadius: 12,
-    borderWidth: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  roleSelected: {
-    borderColor: '#1c1915',
-  },
-  roleLabel: {
-    color: '#1c1915',
-    fontWeight: '600',
-  },
   error: {
-    color: '#7f1d1d',
+    color: colors.danger,
     marginBottom: 8,
   },
 });

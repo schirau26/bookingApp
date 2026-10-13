@@ -1,7 +1,6 @@
-// V1 uses a role enum instead of a Role table. The three roles are fixed.
-// OAuth can be added later by making passwordHash optional and storing a provider id.
-// Staff scheduling is intentionally absent: a business has one shared calendar.
-// Service photos are a single imageUrl. A ServicePhoto table can be added later.
+// One car wash. Customers book a package. The owner runs the queue.
+// Several cars can be washed at once, up to Business.bayCount.
+// Service photos are a single imageUrl.
 
 generator client {
   provider = "prisma-client"
@@ -15,18 +14,10 @@ datasource db {
 enum Role {
   CUSTOMER
   BUSINESS_OWNER
-  ADMIN
 }
 
 enum UserStatus {
   ACTIVE
-  SUSPENDED
-}
-
-enum BusinessApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
   SUSPENDED
 }
 
@@ -40,12 +31,27 @@ enum DayOfWeek {
   SUNDAY
 }
 
+enum VehicleSize {
+  HATCHBACK
+  SEDAN
+  SUV
+  BAKKIE
+  VAN
+}
+
 enum BookingStatus {
-  PENDING
   CONFIRMED
+  ARRIVED
+  WASHING
+  READY
   COMPLETED
   CANCELLED
   NO_SHOW
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
 }
 
 enum ReviewReportStatus {
@@ -59,6 +65,7 @@ enum NotificationType {
   BOOKING_CANCELLATION
   BOOKING_REMINDER
   BOOKING_RESCHEDULED
+  CAR_READY
   NEW_REVIEW
   REVIEW_REPLY
 }
@@ -86,43 +93,31 @@ model User {
   @@index([status])
 }
 
-model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  businesses Business[]
-}
-
 model Business {
-  id              String                 @id @default(cuid())
-  ownerId         String
-  categoryId      String
-  name            String
-  description     String                 @db.Text
-  address         String                 @db.VarChar(255)
-  phone           String                 @db.VarChar(32)
-  email           String
-  logoUrl         String?                @db.VarChar(2048)
-  approvalStatus  BusinessApprovalStatus @default(PENDING)
-  rejectionReason String?                @db.Text
-  averageRating   Decimal                @default(0) @db.Decimal(3, 2)
-  reviewCount     Int                    @default(0)
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  id                     String   @id @default(cuid())
+  ownerId                String
+  name                   String
+  description            String   @db.Text
+  address                String   @db.VarChar(255)
+  phone                  String   @db.VarChar(32)
+  phoneContactName       String   @db.VarChar(80)
+  secondaryContactName   String   @db.VarChar(80)
+  secondaryPhone         String   @db.VarChar(32)
+  email                  String
+  logoUrl                String?  @db.VarChar(2048)
+  bayCount               Int      @default(1)
+  averageRating          Decimal  @default(0) @db.Decimal(3, 2)
+  reviewCount            Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   owner        User                  @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  category     Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   services     Service[]
   workingHours BusinessWorkingHour[]
   photos       BusinessPhoto[]
   bookings     Booking[]
   reviews      Review[]
 
-  @@index([approvalStatus, categoryId])
   @@index([name])
 }
 
@@ -153,22 +148,34 @@ model BusinessWorkingHour {
 }
 
 model Service {
-  id              String   @id @default(cuid())
-  businessId      String
-  name            String
-  description     String   @db.Text
-  price           Decimal  @db.Decimal(10, 2)
-  durationMinutes Int
-  imageUrl        String?  @db.VarChar(2048)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  description String   @db.Text
+  imageUrl    String?  @db.VarChar(2048)
+  icon        String   @default("car-sport-outline") @db.VarChar(64)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  business Business  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  prices   ServicePrice[]
   bookings Booking[]
 
   @@index([businessId, isActive])
   @@index([name])
+}
+
+model ServicePrice {
+  id              String      @id @default(cuid())
+  serviceId       String
+  vehicleSize     VehicleSize
+  price           Decimal     @db.Decimal(10, 2)
+  durationMinutes Int
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, vehicleSize])
 }
 
 model Booking {
@@ -182,9 +189,13 @@ model Booking {
   customerPhone   String        @db.VarChar(32)
   customerEmail   String
   note            String?       @db.Text
+  vehicleSize     VehicleSize
+  registration    String        @db.VarChar(32)
+  make            String?       @db.VarChar(80)
+  color           String?       @db.VarChar(40)
   price           Decimal       @db.Decimal(10, 2)
   durationMinutes Int
-  status          BookingStatus @default(PENDING)
+  status          BookingStatus @default(CONFIRMED)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -192,14 +203,35 @@ model Booking {
   business      Business       @relation(fields: [businessId], references: [id], onDelete: Restrict)
   service       Service        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   review        Review?
+  invoice       Invoice?
   notifications Notification[]
 
-  // Availability queries filter by business and start time.
-  // MySQL cannot exclude overlapping ranges, so Phase 5 must lock the
-  // business row and recheck overlaps inside a transaction.
+  // Availability counts overlaps for this wash. MySQL cannot exclude
+  // overlapping ranges, so booking creation locks the wash row.
   @@index([businessId, startsAt])
   @@index([customerId, startsAt])
   @@index([status])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  bookingId     String        @unique
+  number        String        @unique @db.VarChar(32)
+  issuedAt      DateTime      @default(now())
+  customerName  String
+  customerPhone String        @db.VarChar(32)
+  customerEmail String
+  registration  String        @db.VarChar(32)
+  vehicleSize   VehicleSize
+  packageName   String
+  subtotal      Decimal       @db.Decimal(10, 2)
+  tax           Decimal       @default(0) @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  status        InvoiceStatus @default(UNPAID)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 }
 
 model Review {
@@ -221,8 +253,6 @@ model Review {
   reports       ReviewReport[]
   notifications Notification[]
 
-  // One review per customer per business, enforced in the database.
-  @@unique([userId, businessId])
   @@index([businessId, createdAt])
 }
 

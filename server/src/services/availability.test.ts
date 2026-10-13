@@ -18,6 +18,7 @@ describe('buildSlots', () => {
       durationMinutes: 60,
       now: beforeOpening,
       blocking: [],
+      bayCount: 1,
     });
     expect(startTimes(slots)).toEqual(
       ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'].map((time) =>
@@ -35,6 +36,7 @@ describe('buildSlots', () => {
       durationMinutes: 60,
       now: beforeOpening,
       blocking: [],
+      bayCount: 1,
     });
     expect(slots).toEqual([]);
   });
@@ -53,6 +55,7 @@ describe('buildSlots', () => {
           endsAt: windhoekDateTime(date, '10:00'),
         },
       ],
+      bayCount: 1,
     });
     expect(startTimes(slots)).toEqual(
       ['10:00', '11:00'].map((time) => windhoekDateTime(date, time).toISOString()),
@@ -68,6 +71,7 @@ describe('buildSlots', () => {
       durationMinutes: 60,
       now: windhoekDateTime(date, '09:30'),
       blocking: [],
+      bayCount: 1,
     });
     expect(startTimes(slots)).toEqual(
       ['10:00', '11:00'].map((time) => windhoekDateTime(date, time).toISOString()),
@@ -84,7 +88,37 @@ describe('buildSlots', () => {
       durationMinutes: 60,
       now: beforeOpening,
       blocking: [],
+      bayCount: 1,
     });
     expect(slots).toEqual([]);
+  });
+
+  it('keeps a time open until every bay is taken', () => {
+    const occupied = {
+      startsAt: windhoekDateTime(date, '09:00'),
+      endsAt: windhoekDateTime(date, '10:00'),
+    };
+    const open = buildSlots({
+      date,
+      openTime: '09:00',
+      closeTime: '11:00',
+      isClosed: false,
+      durationMinutes: 60,
+      now: beforeOpening,
+      blocking: [occupied],
+      bayCount: 2,
+    });
+    const full = buildSlots({
+      date,
+      openTime: '09:00',
+      closeTime: '11:00',
+      isClosed: false,
+      durationMinutes: 60,
+      now: beforeOpening,
+      blocking: [occupied, occupied],
+      bayCount: 2,
+    });
+    expect(startTimes(open)).toContain(windhoekDateTime(date, '09:00').toISOString());
+    expect(startTimes(full)).not.toContain(windhoekDateTime(date, '09:00').toISOString());
   });
 });

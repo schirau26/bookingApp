@@ -1,14 +1,16 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Field, PrimaryButton, ScrollScreen, SecondaryButton } from '../components/Form';
 import { useAuth } from '../context/AuthContext';
-import type { CustomerStackParamList } from '../navigation/types';
+import type { CustomerRootParamList } from '../navigation/types';
+import { colors } from '../theme/colors';
 import { ApiError, mediaUrl } from '../services/api';
 import { pickImage } from '../services/images';
 import type { PublicReview } from '../types/review';
 
-type Props = NativeStackScreenProps<CustomerStackParamList, 'ReviewForm'>;
+type Props = NativeStackScreenProps<CustomerRootParamList, 'ReviewForm'>;
 
 export function ReviewFormScreen({ navigation, route }: Props) {
   const { request, upload } = useAuth();
@@ -113,19 +115,16 @@ export function ReviewFormScreen({ navigation, route }: Props) {
     <ScrollScreen>
       <Text style={styles.label}>Rating</Text>
       <View style={styles.ratings}>
-        {[1, 2, 3, 4, 5].map((value) => {
-          const active = value === rating;
-          return (
-            <Pressable
-              accessibilityRole="button"
-              key={value}
-              onPress={() => setRating(value)}
-              style={[styles.rating, active ? styles.ratingActive : null]}
-            >
-              <Text style={[styles.ratingLabel, active ? styles.ratingLabelActive : null]}>{value}</Text>
-            </Pressable>
-          );
-        })}
+        {[1, 2, 3, 4, 5].map((value) => (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${value} star${value === 1 ? '' : 's'}`}
+            key={value}
+            onPress={() => setRating(value)}
+          >
+            <Ionicons color={colors.lime} name={value <= rating ? 'star' : 'star-outline'} size={32} />
+          </Pressable>
+        ))}
       </View>
       <Field
         autoCapitalize="sentences"
@@ -152,7 +151,7 @@ export function ReviewFormScreen({ navigation, route }: Props) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PrimaryButton
         disabled={submitting}
-        label={submitting ? 'Saving…' : reviewId ? 'Save changes' : 'Publish review'}
+        label={submitting ? 'Saving…' : reviewId ? 'Save changes' : 'Submit review'}
         onPress={() => void save()}
       />
       {reviewId ? <SecondaryButton label="Delete review" onPress={removeReview} /> : null}
@@ -165,39 +164,18 @@ export function ReviewFormScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   label: {
-    color: '#3f3832',
+    color: colors.inkSoft,
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
   },
   ratings: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     marginBottom: 16,
   },
-  rating: {
-    alignItems: 'center',
-    borderColor: '#e4ddd2',
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  ratingActive: {
-    backgroundColor: '#1c1915',
-    borderColor: '#1c1915',
-  },
-  ratingLabel: {
-    color: '#1c1915',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  ratingLabelActive: {
-    color: '#fff',
-  },
   hint: {
-    color: '#6b6256',
+    color: colors.muted,
     marginBottom: 12,
   },
   photos: {
@@ -212,7 +190,7 @@ const styles = StyleSheet.create({
     width: 88,
   },
   error: {
-    color: '#7f1d1d',
+    color: colors.danger,
     marginBottom: 8,
   },
 });

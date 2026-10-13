@@ -11,13 +11,31 @@ const phoneSchema = z
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');
 
+export const vehicleSizeSchema = z.enum(['HATCHBACK', 'SEDAN', 'SUV', 'BAKKIE', 'VAN']);
+
 export const availabilityQuerySchema = z.object({
+  packageId: z.string().trim().min(1),
+  vehicleSize: vehicleSizeSchema,
   date: dateSchema,
 });
 
 export const createBookingSchema = z.object({
-  businessId: z.string().trim().min(1),
-  serviceId: z.string().trim().min(1),
+  packageId: z.string().trim().min(1),
+  vehicleSize: vehicleSizeSchema,
+  registration: z
+    .string()
+    .trim()
+    .min(2, 'Enter the registration')
+    .max(32, 'Enter the registration')
+    .transform((value) => value.toUpperCase()),
+  make: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().trim().min(1).max(80).optional(),
+  ),
+  color: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().trim().min(1).max(40).optional(),
+  ),
   startsAt: z.iso.datetime(),
   customerName: z.string().trim().min(2).max(191),
   customerPhone: phoneSchema,
@@ -35,7 +53,7 @@ export const myBookingsQuerySchema = z.object({
 export const ownerBookingsQuerySchema = z.object({
   status: z.preprocess(
     emptyToUndefined,
-    z.enum(['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']).optional(),
+    z.enum(['CONFIRMED', 'ARRIVED', 'WASHING', 'READY', 'COMPLETED', 'CANCELLED', 'NO_SHOW']).optional(),
   ),
   date: z.preprocess(emptyToUndefined, dateSchema.optional()),
 });

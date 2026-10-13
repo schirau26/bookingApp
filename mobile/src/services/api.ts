@@ -6,7 +6,7 @@ export type PublicUser = {
   fullName: string;
   phone: string | null;
   profileImageUrl: string | null;
-  role: 'CUSTOMER' | 'BUSINESS_OWNER' | 'ADMIN';
+  role: 'CUSTOMER' | 'BUSINESS_OWNER';
   status: 'ACTIVE' | 'SUSPENDED';
   createdAt: string;
 };

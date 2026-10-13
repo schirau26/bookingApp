@@ -1,37 +1,38 @@
-export type Category = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
+import type { ComponentProps } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import type { VehicleSize } from './booking';
+
+export type { VehicleSize };
+
+export const SERVICE_ICONS = [
+  'car-sport-outline',
+  'sparkles-outline',
+  'color-wand-outline',
+  'ellipse-outline',
+  'shield-checkmark-outline',
+  'water-outline',
+  'brush-outline',
+] as const satisfies readonly ComponentProps<typeof Ionicons>['name'][];
+
+export type ServiceIcon = (typeof SERVICE_ICONS)[number];
+
+export const DEFAULT_SERVICE_ICON: ServiceIcon = 'car-sport-outline';
+
+export type PackagePrice = {
+  vehicleSize: VehicleSize;
+  price: string;
+  durationMinutes: number;
 };
 
-export type PublicBusiness = {
+export type WashPackage = {
   id: string;
   name: string;
   description: string;
-  address: string;
-  phone: string;
-  email: string;
-  logoUrl: string | null;
-  averageRating: string;
-  reviewCount: number;
-  category: { id: string; name: string; slug: string };
-  photos: { id: string; url: string; sortOrder: number }[];
-  workingHours: WorkingHour[];
-};
-
-export type BusinessCard = {
-  id: string;
-  name: string;
-  description: string;
-  address: string;
-  phone: string;
-  email: string;
-  logoUrl: string | null;
-  averageRating: string;
-  reviewCount: number;
+  imageUrl: string | null;
+  icon: string;
   startingPrice: string | null;
-  category: { id: string; name: string; slug: string };
+  prices: PackagePrice[];
+  isActive?: boolean;
 };
 
 export type WorkingHour = {
@@ -41,45 +42,27 @@ export type WorkingHour = {
   closeTime: string | null;
 };
 
-export type PublicService = {
-  id: string;
-  name: string;
-  description: string;
-  price: string;
-  durationMinutes: number;
-  imageUrl: string | null;
-};
-
-export type OwnerService = PublicService & { isActive: boolean };
-
-export type OwnerBusinessSummary = {
-  id: string;
-  name: string;
-  address: string;
-  approvalStatus: ApprovalStatus;
-  rejectionReason: string | null;
-  category: { id: string; name: string; slug: string };
-};
-
-export type OwnerBusiness = {
+export type Wash = {
   id: string;
   name: string;
   description: string;
   address: string;
   phone: string;
+  phoneContactName: string;
+  secondaryContactName: string;
+  secondaryPhone: string;
   email: string;
   logoUrl: string | null;
-  approvalStatus: ApprovalStatus;
-  rejectionReason: string | null;
+  bayCount: number;
   averageRating: string;
   reviewCount: number;
-  category: { id: string; name: string; slug: string };
   photos: { id: string; url: string; sortOrder: number }[];
   workingHours: WorkingHour[];
-  services: OwnerService[];
+  packages: WashPackage[];
+  owner: { fullName: string; profileImageUrl: string | null };
 };
 
-export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+export type OwnerBusiness = Wash;
 
 export type Weekday =
   | 'MONDAY'
@@ -100,15 +83,16 @@ export const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 'SUNDAY', label: 'Sunday' },
 ];
 
-export const approvalLabels: Record<ApprovalStatus, string> = {
-  PENDING: 'Pending review',
-  APPROVED: 'Approved',
-  REJECTED: 'Rejected',
-  SUSPENDED: 'Suspended',
-};
+export const VEHICLE_SIZE_OPTIONS: { value: VehicleSize; label: string }[] = [
+  { value: 'HATCHBACK', label: 'Hatchback' },
+  { value: 'SEDAN', label: 'Sedan' },
+  { value: 'SUV', label: 'SUV' },
+  { value: 'BAKKIE', label: 'Bakkie' },
+  { value: 'VAN', label: 'Van' },
+];
 
 export function formatMoney(value: string | null) {
-  return value ? `N$${value}` : 'No active services';
+  return value ? `N$${value}` : 'Ask for a price';
 }
 
 export function formatRating(average: string, count: number) {
@@ -118,4 +102,8 @@ export function formatRating(average: string, count: number) {
 
 export function formatDuration(minutes: number) {
   return `${minutes} min`;
+}
+
+export function priceFor(pack: WashPackage, size: VehicleSize) {
+  return pack.prices.find((row) => row.vehicleSize === size) ?? null;
 }

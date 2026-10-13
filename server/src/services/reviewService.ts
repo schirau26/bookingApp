@@ -2,12 +2,7 @@ import { Prisma } from '../generated/prisma/client.js';
 import { prisma } from '../db/prisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { deleteStoredImage, saveImage } from '../storage/files.js';
-import type {
-  AdminReviewQuery,
-  CreateReviewInput,
-  ReportQuery,
-  UpdateReviewInput,
-} from '../validators/review.js';
+import type { CreateReviewInput, UpdateReviewInput } from '../validators/review.js';
 import { createNotification } from './notificationService.js';
 
 const MAX_PHOTOS = 4;
@@ -15,7 +10,7 @@ const MAX_PHOTOS = 4;
 const reviewInclude = {
   user: { select: { id: true, fullName: true, email: true } },
   photos: { orderBy: { createdAt: 'asc' as const } },
-  business: { select: { id: true, name: true, ownerId: true, approvalStatus: true } },
+  business: { select: { id: true, name: true, ownerId: true } },
 } satisfies Prisma.ReviewInclude;
 
 type ReviewRecord = Prisma.ReviewGetPayload<{ include: typeof reviewInclude }>;
@@ -58,13 +53,10 @@ async function loadReview(reviewId: string) {
 export async function listBusinessReviews(businessId: string, viewerId?: string) {
   const business = await prisma.business.findUnique({
     where: { id: businessId },
-    select: { id: true, ownerId: true, approvalStatus: true },
+    select: { id: true, ownerId: true },
   });
-  if (!business) throw new HttpError(404, 'Business not found');
+  if (!business) throw new HttpError(404, 'Wash not found');
   const isOwner = viewerId === business.ownerId;
-  if (business.approvalStatus !== 'APPROVED' && !isOwner) {
-    throw new HttpError(404, 'Business not found');
-  }
 
   const reviews = await prisma.review.findMany({
     where: { businessId },
@@ -94,14 +86,8 @@ export async function createReview(userId: string, input: CreateReviewInput) {
   if (!booking) throw new HttpError(404, 'Booking not found');
   if (booking.customerId !== userId) throw new HttpError(403, 'You cannot review this booking');
   if (booking.status !== 'COMPLETED') {
-    throw new HttpError(409, 'You can review this business after the booking is completed');
+    throw new HttpError(409, 'You can review this wash after it is completed');
   }
-
-  const existing = await prisma.review.findUnique({
-    where: { userId_businessId: { userId, businessId: booking.businessId } },
-    select: { id: true },
-  });
-  if (existing) throw new HttpError(409, 'You have already reviewed this business');
 
   try {
     const review = await prisma.$transaction(async (tx) => {
@@ -131,7 +117,7 @@ export async function createReview(userId: string, input: CreateReviewInput) {
     return { review: toReview(review) };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      throw new HttpError(409, 'You have already reviewed this business');
+      throw new HttpError(409, 'You have already reviewed this wash');
     }
     throw error;
   }
@@ -236,94 +222,3 @@ export async function reportReview(ownerId: string, reviewId: string, reason: st
   }
 }
 
-export async function listAdminReviews(query: AdminReviewQuery) {
-  const where: Prisma.ReviewWhereInput = query.q
-    ? {
-        OR: [
-          { body: { contains: query.q } },
-          { business: { name: { contains: query.q } } },
-          { user: { fullName: { contains: query.q } } },
-        ],
-      }
-    : {};
-  const [total, rows] = await Promise.all([
-    prisma.review.count({ where }),
-    prisma.review.findMany({
-      where,
-      include: { ...reviewInclude, _count: { select: { reports: true } } },
-      orderBy: { createdAt: 'desc' },
-      skip: (query.page - 1) * query.limit,
-      take: query.limit,
-    }),
-  ]);
-  return {
-    reviews: rows.map((review) => ({
-      ...toReview(review),
-      business: { id: review.business.id, name: review.business.name },
-      author: { id: review.user.id, fullName: review.user.fullName, email: review.user.email },
-      reportCount: review._count.reports,
-    })),
-    page: query.page,
-    limit: query.limit,
-    total,
-  };
-}
-
-export async function deleteReviewAsAdmin(reviewId: string) {
-  const review = await loadReview(reviewId);
-  await removeReviewRecord(review);
-}
-
-export async function listReviewReports(query: ReportQuery) {
-  const where = query.status ? { status: query.status } : {};
-  const [total, rows] = await Promise.all([
-    prisma.reviewReport.count({ where }),
-    prisma.reviewReport.findMany({
-      where,
-      include: {
-        review: { select: { id: true, body: true, rating: true, business: { select: { name: true } } } },
-        reporter: { select: { fullName: true, email: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: (query.page - 1) * query.limit,
-      take: query.limit,
-    }),
-  ]);
-  return {
-    reports: rows.map((report) => ({
-      id: report.id,
-      reason: report.reason,
-      status: report.status,
-      createdAt: report.createdAt.toISOString(),
-      review: {
-        id: report.review.id,
-        body: report.review.body,
-        rating: report.review.rating,
-        businessName: report.review.business.name,
-      },
-      reporter: report.reporter,
-    })),
-    page: query.page,
-    limit: query.limit,
-    total,
-  };
-}
-
-async function setReportStatus(reportId: string, status: 'DISMISSED' | 'RESOLVED') {
-  const existing = await prisma.reviewReport.findUnique({ where: { id: reportId }, select: { id: true } });
-  if (!existing) throw new HttpError(404, 'Report not found');
-  const report = await prisma.reviewReport.update({
-    where: { id: reportId },
-    data: { status },
-    select: { id: true, status: true },
-  });
-  return { report };
-}
-
-export function dismissReport(reportId: string) {
-  return setReportStatus(reportId, 'DISMISSED');
-}
-
-export function resolveReport(reportId: string) {
-  return setReportStatus(reportId, 'RESOLVED');
-}

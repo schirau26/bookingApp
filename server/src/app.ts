@@ -4,14 +4,13 @@ import helmet from 'helmet';
 import { corsOrigins } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFoundHandler } from './middleware/notFound.js';
-import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
 import { bookingRouter } from './routes/bookings.js';
 import { businessRouter } from './routes/businesses.js';
-import { categoryRouter } from './routes/categories.js';
 import { healthRouter } from './routes/health.js';
 import { notificationRouter } from './routes/notifications.js';
 import { reviewRouter } from './routes/reviews.js';
+import { washRouter } from './routes/wash.js';
 import { uploadsDirectory, uploadsPublicPath } from './storage/files.js';
 
 export function createApp() {
@@ -33,12 +32,11 @@ export function createApp() {
 
   app.use('/api', healthRouter);
   app.use('/api/auth', authRouter);
-  app.use('/api/categories', categoryRouter);
+  app.use('/api/wash', washRouter);
   app.use('/api/businesses', businessRouter);
   app.use('/api/bookings', bookingRouter);
   app.use('/api/reviews', reviewRouter);
   app.use('/api/notifications', notificationRouter);
-  app.use('/api/admin', adminRouter);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

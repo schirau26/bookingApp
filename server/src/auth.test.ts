@@ -5,7 +5,6 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { env } from './config/env.js';
 import { prisma } from './db/prisma.js';
 import { createApp } from './app.js';
-import { hashPassword } from './utils/password.js';
 
 const app = createApp();
 const createdEmails: string[] = [];
@@ -16,13 +15,12 @@ function email() {
   return value;
 }
 
-async function register(role: 'CUSTOMER' | 'BUSINESS_OWNER' = 'CUSTOMER') {
+async function register() {
   const response = await request(app).post('/api/auth/register').send({
     fullName: 'Test User',
     email: email(),
     password: 'Password1!',
     phone: '+264811234567',
-    role,
   });
   return response;
 }
@@ -35,27 +33,33 @@ afterAll(async () => {
 });
 
 describe('authentication', () => {
-  it('registers a customer and a business owner', async () => {
-    const customer = await register('CUSTOMER');
-    const owner = await register('BUSINESS_OWNER');
+  it('registers a customer and ignores an owner role on the form', async () => {
+    const customer = await register();
+    const ownerAttempt = await request(app).post('/api/auth/register').send({
+      fullName: 'Owner Hopeful',
+      email: email(),
+      password: 'Password1!',
+      role: 'BUSINESS_OWNER',
+    });
 
     expect(customer.status).toBe(201);
     expect(customer.body.user.role).toBe('CUSTOMER');
     expect(customer.body.user.passwordHash).toBeUndefined();
     expect(customer.body.accessToken).toEqual(expect.any(String));
     expect(customer.body.refreshToken).toEqual(expect.any(String));
-    expect(owner.status).toBe(201);
-    expect(owner.body.user.role).toBe('BUSINESS_OWNER');
+    expect(ownerAttempt.status).toBe(201);
+    expect(ownerAttempt.body.user.role).toBe('CUSTOMER');
   });
 
-  it('rejects admin self-registration, duplicate email, and a weak password', async () => {
+  it('creates a customer even if a role is sent, and rejects a duplicate email or a weak password', async () => {
     const admin = await request(app).post('/api/auth/register').send({
       fullName: 'Admin Hopeful',
       email: email(),
       password: 'Password1!',
       role: 'ADMIN',
     });
-    expect(admin.status).toBe(422);
+    expect(admin.status).toBe(201);
+    expect(admin.body.user.role).toBe('CUSTOMER');
 
     const first = await register();
     const duplicate = await request(app).post('/api/auth/register').send({
@@ -121,42 +125,21 @@ describe('authentication', () => {
     expect(meResponse.status).toBe(403);
   });
 
-  it('requires a token for the current user and restricts the admin probe', async () => {
+  it('requires a token for the current user', async () => {
     const missing = await request(app).get('/api/auth/me');
     expect(missing.status).toBe(401);
 
-    const customer = await register('CUSTOMER');
+    const customer = await register();
     const customerMe = await request(app)
       .get('/api/auth/me')
       .set('Authorization', `Bearer ${customer.body.accessToken}`);
-    const customerAdmin = await request(app)
+    const missingAdmin = await request(app)
       .get('/api/admin/me')
       .set('Authorization', `Bearer ${customer.body.accessToken}`);
 
     expect(customerMe.status).toBe(200);
     expect(customerMe.body.user.email).toBe(customer.body.user.email);
-    expect(customerAdmin.status).toBe(403);
-
-    const adminEmail = email();
-    await prisma.user.create({
-      data: {
-        email: adminEmail,
-        fullName: 'Test Admin',
-        passwordHash: await hashPassword('Password1!'),
-        role: 'ADMIN',
-      },
-    });
-    const adminLogin = await request(app).post('/api/auth/login').send({
-      email: adminEmail,
-      password: 'Password1!',
-    });
-    const adminMe = await request(app)
-      .get('/api/admin/me')
-      .set('Authorization', `Bearer ${adminLogin.body.accessToken}`);
-
-    expect(adminLogin.status).toBe(200);
-    expect(adminMe.status).toBe(200);
-    expect(adminMe.body.user.role).toBe('ADMIN');
+    expect(missingAdmin.status).toBe(404);
 
     const garbage = await request(app).get('/api/auth/me').set('Authorization', 'Bearer not-a-token');
     const expiredToken = await new SignJWT({ role: 'CUSTOMER' })

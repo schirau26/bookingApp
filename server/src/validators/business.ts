@@ -1,6 +1,5 @@
 import { z } from 'zod';
-
-const emptyToUndefined = (value: unknown) => (value === '' ? undefined : value);
+import { vehicleSizeSchema } from './booking.js';
 
 const phoneSchema = z
   .string()
@@ -30,16 +29,33 @@ const priceSchema = z
   )
   .transform((value) => Number(value).toFixed(2));
 
+const priceRowSchema = z.object({
+  vehicleSize: vehicleSizeSchema,
+  price: priceSchema,
+  durationMinutes: z.coerce.number().int().min(5).max(480),
+});
+
+function uniqueSizes(prices: { vehicleSize: string }[], ctx: z.RefinementCtx) {
+  if (new Set(prices.map((row) => row.vehicleSize)).size !== prices.length) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Include each vehicle size once',
+      path: ['prices'],
+    });
+  }
+}
+
 const businessFields = {
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().min(1).max(5000),
   address: z.string().trim().min(1).max(255),
   phone: phoneSchema,
+  phoneContactName: z.string().trim().min(2).max(80),
+  secondaryContactName: z.string().trim().min(2).max(80),
+  secondaryPhone: phoneSchema,
   email: z.email().transform((email) => email.toLowerCase()),
-  categoryId: z.string().trim().min(1),
+  bayCount: z.coerce.number().int().min(1).max(20),
 };
-
-export const createBusinessSchema = z.object(businessFields);
 
 export const updateBusinessSchema = z
   .object({
@@ -47,8 +63,11 @@ export const updateBusinessSchema = z
     description: businessFields.description.optional(),
     address: businessFields.address.optional(),
     phone: businessFields.phone.optional(),
+    phoneContactName: businessFields.phoneContactName.optional(),
+    secondaryContactName: businessFields.secondaryContactName.optional(),
+    secondaryPhone: businessFields.secondaryPhone.optional(),
     email: businessFields.email.optional(),
-    categoryId: businessFields.categoryId.optional(),
+    bayCount: businessFields.bayCount.optional(),
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
     message: 'Provide a field to update',
@@ -104,68 +123,39 @@ export const hoursSchema = z
     }
   });
 
+export const serviceIconSchema = z.enum([
+  'car-sport-outline',
+  'sparkles-outline',
+  'color-wand-outline',
+  'ellipse-outline',
+  'shield-checkmark-outline',
+  'water-outline',
+  'brush-outline',
+]);
+
+const pricesSchema = z.array(priceRowSchema).length(5).superRefine(uniqueSizes);
+
 export const createServiceSchema = z.object({
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().min(1).max(5000),
-  price: priceSchema,
-  durationMinutes: z.coerce.number().int().min(5).max(480),
   isActive: z.boolean().optional(),
+  icon: serviceIconSchema.optional(),
+  prices: pricesSchema,
 });
 
 export const updateServiceSchema = z
   .object({
     name: z.string().trim().min(2).max(120).optional(),
     description: z.string().trim().min(1).max(5000).optional(),
-    price: priceSchema.optional(),
-    durationMinutes: z.coerce.number().int().min(5).max(480).optional(),
     isActive: z.boolean().optional(),
+    icon: serviceIconSchema.optional(),
+    prices: pricesSchema.optional(),
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
     message: 'Provide a field to update',
   });
 
-const pageSchema = z.preprocess(
-  emptyToUndefined,
-  z.coerce.number().int().positive().default(1),
-);
-const limitSchema = z.preprocess(
-  emptyToUndefined,
-  z.coerce.number().int().min(1).max(50).default(20),
-);
-
-export const businessQuerySchema = z.object({
-  q: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
-  category: z.preprocess(emptyToUndefined, z.string().trim().max(80).optional()),
-  location: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
-  minRating: z.preprocess(emptyToUndefined, z.coerce.number().min(0).max(5).optional()),
-  maxPrice: z.preprocess(emptyToUndefined, z.coerce.number().positive().max(99999999.99).optional()),
-  openOn: z.preprocess(emptyToUndefined, dayOfWeekSchema.optional()),
-  sort: z.preprocess(
-    emptyToUndefined,
-    z.enum(['rating', 'reviews', 'price', 'name']).default('rating'),
-  ),
-  page: pageSchema,
-  limit: limitSchema,
-});
-
-export const adminBusinessQuerySchema = z.object({
-  q: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
-  status: z.preprocess(
-    emptyToUndefined,
-    z.enum(['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED']).optional(),
-  ),
-  page: pageSchema,
-  limit: limitSchema,
-});
-
-export const rejectBusinessSchema = z.object({
-  reason: z.string().trim().min(1).max(1000),
-});
-
-export type CreateBusinessInput = z.infer<typeof createBusinessSchema>;
 export type UpdateBusinessInput = z.infer<typeof updateBusinessSchema>;
 export type HoursInput = z.infer<typeof hoursSchema>;
 export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 export type UpdateServiceInput = z.infer<typeof updateServiceSchema>;
-export type BusinessQuery = z.infer<typeof businessQuerySchema>;
-export type AdminBusinessQuery = z.infer<typeof adminBusinessQuerySchema>;

@@ -3,11 +3,11 @@ import { prisma } from './prisma.js';
 async function main() {
   await prisma.$queryRaw`SELECT 1`;
 
-  const [users, categories, businesses, services, workingHours] = await Promise.all([
+  const [users, businesses, services, prices, workingHours] = await Promise.all([
     prisma.user.count(),
-    prisma.category.count(),
     prisma.business.count(),
     prisma.service.count(),
+    prisma.servicePrice.count(),
     prisma.businessWorkingHour.count(),
   ]);
 
@@ -15,9 +15,9 @@ async function main() {
     JSON.stringify({
       connected: true,
       users,
-      categories,
       businesses,
       services,
+      prices,
       workingHours,
     }),
   );

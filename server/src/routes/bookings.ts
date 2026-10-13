@@ -4,11 +4,15 @@ import { requireAuth, requireRole } from '../middleware/requireAuth.js';
 import {
   cancelBooking,
   completeBooking,
-  confirmBooking,
   createBooking,
   getBooking,
+  getInvoice,
   listMyBookings,
+  markArrived,
+  markInvoicePaid,
   markNoShow,
+  markReady,
+  markWashing,
 } from '../services/bookingService.js';
 import { createBookingSchema, myBookingsQuerySchema } from '../validators/booking.js';
 
@@ -37,6 +41,22 @@ bookingRouter.post('/', requireAuth, requireRole(Role.CUSTOMER), async (req, res
   }
 });
 
+bookingRouter.get('/:id/invoice', requireAuth, async (req, res, next) => {
+  try {
+    res.json(await getInvoice(idParam(req.params.id), req.authUser!.id));
+  } catch (error) {
+    next(error);
+  }
+});
+
+bookingRouter.post('/:id/invoice/pay', requireAuth, requireRole(Role.BUSINESS_OWNER), async (req, res, next) => {
+  try {
+    res.json(await markInvoicePaid(idParam(req.params.id), req.authUser!.id));
+  } catch (error) {
+    next(error);
+  }
+});
+
 bookingRouter.get('/:id', requireAuth, async (req, res, next) => {
   try {
     res.json(await getBooking(idParam(req.params.id), req.authUser!.id));
@@ -53,9 +73,25 @@ bookingRouter.post('/:id/cancel', requireAuth, async (req, res, next) => {
   }
 });
 
-bookingRouter.post('/:id/confirm', requireAuth, requireRole(Role.BUSINESS_OWNER), async (req, res, next) => {
+bookingRouter.post('/:id/arrive', requireAuth, requireRole(Role.BUSINESS_OWNER), async (req, res, next) => {
   try {
-    res.json(await confirmBooking(idParam(req.params.id), req.authUser!.id));
+    res.json(await markArrived(idParam(req.params.id), req.authUser!.id));
+  } catch (error) {
+    next(error);
+  }
+});
+
+bookingRouter.post('/:id/wash', requireAuth, requireRole(Role.BUSINESS_OWNER), async (req, res, next) => {
+  try {
+    res.json(await markWashing(idParam(req.params.id), req.authUser!.id));
+  } catch (error) {
+    next(error);
+  }
+});
+
+bookingRouter.post('/:id/ready', requireAuth, requireRole(Role.BUSINESS_OWNER), async (req, res, next) => {
+  try {
+    res.json(await markReady(idParam(req.params.id), req.authUser!.id));
   } catch (error) {
     next(error);
   }
